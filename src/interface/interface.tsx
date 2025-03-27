@@ -10,22 +10,9 @@ export type RootStackParamListInitial = {
   RootStack: undefined;
 };
 
-export interface postNumberCodeResponse {
-  codeValidationNumberSecurity: string
-};
-
 export interface PostUserResponse {
   user: Users;
   token: string;
-}
-
-export interface postCodeNumberVerifyData {
-  phoneNumber: number
-};
-
-export interface postCodeCreateUserValidationData {
-  code: string,
-  codeValidationNumberSecurity: string
 }
 
 export interface loginData {
@@ -47,37 +34,4 @@ export interface Users {
 export interface Location {
   latitude: number,
   longitude: number
-}
-
-export interface postTripCalculateData {
-  latitudeStart: number,
-  longitudeStart: number,
-  latitudeEnd: number,
-  longitudeEnd: number,
-  paymentMethod: string,
-  discountCode?: number
-}
-
-export interface tripCalculate {
-  uid: string,
-  usersClientId: string,
-  usersClient: string,
-  price: number,
-  basePrice: number,
-  paymentMethod: string,
-  kilometers: number,
-  latitudeStart : number,
-  longitudeStart: number,
-  latitudeEnd   : number,
-  longitudeEnd  : number,
-  addressStart: string,
-  addressEnd  : string,
-  dateScheduled: string,
-  hourScheduledStart: string,
-  hourScheduledEnd  : string,
-  scheduledStatus: boolean,
-  discountCode: string,
-  discountApplied: boolean,
-  status: boolean,
-  created: string
 }

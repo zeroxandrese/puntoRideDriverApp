@@ -4,7 +4,7 @@ import { View } from 'react-native';
 
 import { RootStackParamList } from '../interface/interface';
 import { LoginScreen } from '../screen/LoginScreen';
-import { CodePhoneValidationScreen } from '../screen/CodePhoneValidationScreen';
+// import { CodePhoneValidationScreen } from '../screen/CodePhoneValidationScreen';
 import { HomeScreen } from '../screen/HomeScreen';
 import { PermissionsScreen } from '../screen/PermissionsScreen';
 import { userPermissionStore } from '../store/permissions/userPermissionStore';
@@ -49,7 +49,7 @@ export const StackNavigationInitial = () => {
       <Stack.Screen name="HomeScreen" component={HomeScreen} />
       <Stack.Screen name="PermissionsScreen" component={PermissionsScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="CodePhoneValidation" component={CodePhoneValidationScreen} />
+      {/* <Stack.Screen name="CodePhoneValidation" component={CodePhoneValidationScreen} /> */}
     </Stack.Navigator>
   );
 };

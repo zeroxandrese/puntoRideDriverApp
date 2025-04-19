@@ -8,6 +8,7 @@ export type RootStackParamList = {
 export type RootStackParamListInitial = {
   Initial: undefined;
   RootStack: undefined;
+  Home: undefined;
 };
 
 export interface PostUserResponse {

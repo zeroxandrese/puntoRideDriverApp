@@ -6,6 +6,7 @@ interface PermissionState {
     locationStatus: PermissionStatus;
 
     requestLocationPermissions: () =>Promise<PermissionStatus>;
+    requestNotificationsPermissions: () =>Promise<PermissionStatus>;
     checkLocationPermissions: () =>Promise<PermissionStatus>;
 }
 
@@ -21,6 +22,13 @@ export const userPermissionStore = create<PermissionState>()( set =>({
 
     checkLocationPermissions: async () =>{
         const status = await checkLocationPermissions();
+        set({ locationStatus: status });
+ 
+        return status
+     },
+
+     requestNotificationsPermissions: async () =>{
+        const status = await requestLocationPermissions();
         set({ locationStatus: status });
  
         return status

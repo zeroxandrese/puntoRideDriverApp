@@ -1,4 +1,4 @@
-package com.puntorideappfinal
+package com.site.puntoridedriver
 
 import android.app.Application
 import com.facebook.react.PackageList

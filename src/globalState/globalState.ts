@@ -3,19 +3,20 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import apiConfig from "../apiConfig/apiConfig";
 
 import {
-   Users,
+   Driver,
    loginData,
-   PostUserResponse,
-  
+   PostDriverResponse,
+   registerData
 } from '../interface/interface';
 
 interface AuthState {
   token: string | null;
-  user: Users | null;
+  user: Driver | null;
   status: "checking" | "authenticated" | "not-authenticated";
   errorMessage: string;
   checkToken: () => Promise<void>;
   signIn: (loginData: loginData) => Promise<void>;
+  registerDriver: (registerData: registerData) => Promise<void>;
   logOut: () => Promise<void>;
 
 }
@@ -23,7 +24,6 @@ interface AuthState {
 const useAuthStore = create<AuthState>((set, get) => ({
   token: null,
   user: null,
-  codeValidationNumberSecurity: null,
   status: "checking",
   errorMessage: "",
 
@@ -35,10 +35,10 @@ const useAuthStore = create<AuthState>((set, get) => ({
         return;
       }
 
-      const resp = await apiConfig.post("/auth/verify");
+      const resp = await apiConfig.post("/authDriver/verify");
 
       if (resp.status === 201) {
-        set({ token, user: resp.data.responseUser, status: "authenticated" });
+        set({ token, user: resp.data.user, status: "authenticated" });
       } else {
         set({ status: "not-authenticated", token: null, user: null });
       }
@@ -48,10 +48,10 @@ const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  signIn: async ({ numberPhone }) => {
+  signIn: async ({ email, password }) => {
     try {
-      const { data } = await apiConfig.post<PostUserResponse>("/auth/login", { numberPhone });
-
+      const { data } = await apiConfig.post<PostDriverResponse>("/authDriver/login", { email, password });
+   
       await AsyncStorage.setItem("token", data.token);
       set({ token: data.token, user: data.user, status: "authenticated" });
     } catch (error: any) {
@@ -64,13 +64,14 @@ const useAuthStore = create<AuthState>((set, get) => ({
     set({ token: null, user: null, status: "not-authenticated" });
   },
 
-  postCodeNumberVerify: async ({ phoneNumber }) => {
+  registerDriver: async ({ email, password, code }) => {
     try {
 
-      const { data } = await apiConfig.post<postNumberCodeResponse>(`/validationCode/`, { phoneNumber });
+      const { data } = await apiConfig.post<PostDriverResponse>(`/usersDriver/`, { email, password, code });
 
       set({
-        codeValidationNumberSecurity: data.codeValidationNumberSecurity
+        user: data.user,
+        token: data.token
       });
     } catch (error: any) {
       set({ errorMessage: error.response?.data?.msg || "Error al comentar" });

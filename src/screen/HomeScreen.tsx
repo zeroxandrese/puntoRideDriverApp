@@ -1,63 +1,312 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar, Keyboard } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import { socket } from '../utils/socketioClient';
+import Modal from 'react-native-modal';
 
-import { RootStackParamListInitial } from '../interface/interface';
+import { RootStackParamList, LatLng, trip } from '../interface/interface';
+import CarLoading from '../components/cardLoading';
+import { Maps } from "../components/Maps";
+import { useLocationStore } from '../store/location/locationStore';
+import { globalStyle } from '../theme/global.style';
+import { useServiceBusinessStore } from "../store/business/useServiceBusiness";
+import IconMenu from "../assets/iconMenu.svg";
+import { CurrentTripScreen } from './CurrentTripScreen';
+import useAuthStore from '../globalState/globalState';
+import FontAwesome6 from '@react-native-vector-icons/fontawesome6';
+import { ServiceScreen } from '../screen/ServiceScreen';
+import { ServiceDetailScreen } from './ServiceDetailScreen';
+import useSendLocation from '../components/useSendLocation';
 
-type NavigationProps = StackNavigationProp<RootStackParamListInitial, "Initial">;
+type NavigationProps = StackNavigationProp<RootStackParamList, "HomeScreen">;
 
 export const HomeScreen = () => {
+  useSendLocation();
   const navigation = useNavigation<NavigationProps>();
-  const handleLogout = () => {
-    // Aquí podrías llamar a tu store o navegación para cerrar sesión
-    
-    Alert.alert('Cerrar sesión', 'Has cerrado sesión exitosamente');
-    navigation.navigate('Initial');
+  const { user, logOut } = useAuthStore();
+  const { lastKnowLocation, getLocation } = useLocationStore();
+  const snapPoints = useMemo(() => ["55%", "100%"], []);
+  const [tripDetail, setTripDetail] = useState<trip | null>(null);
+  const [statusPanDown, setStatusPanDown] = useState(false);
+  const [btnDisable, setBtnDisable] = useState(false)
+  const bottomSheetRef = useRef<BottomSheet>(null);
+  const { tripCurrent, tripCurrentVehicle,
+    tripCurrentClient, initSocketListeners, comments,
+    polyline, tripStarted, travelState, set, postCancelTrip,
+    removeSocketListeners, getActiveTrip, postAcceptedTrip, getVehicle, endTrip } = useServiceBusinessStore();
+
+  const [serviceMarkers, setServiceMarkers] = useState<{ origin: LatLng; destination: LatLng }>({
+    origin: { latitude: 0, longitude: 0 },
+    destination: { latitude: 0, longitude: 0 }
+  });
+
+  const [modalVisible, setModalVisible] = useState({
+    modal1: false,
+    modal2: false
+  });
+
+  const toggleModal = (modalName: string) => {
+    setModalVisible((prev: any) => ({
+      ...prev,
+      [modalName]: !prev[modalName],
+    }));
+  };
+
+  useEffect(() => {
+    getVehicle();
+  }, []);
+
+  useEffect(() => {
+    // Emitir confirm-trip solo si ya está conectado
+    if (socket.connected && tripCurrent?.uid) {
+      setStatusPanDown(true);
+      socket.emit("confirm-trip", { tripId: tripCurrent.uid });
+    } else if (tripCurrent?.uid) {
+      // Esperar a que conecte
+      const handleConnect = () => {
+        socket.emit("confirm-trip", { tripId: tripCurrent.uid });
+      };
+      socket.once("connect", handleConnect);
+      return () => {
+        socket.off("connect", handleConnect);
+      };
+    }
+  }, [tripCurrent?.uid]);
+
+  useEffect(() => {
+    const handleConnect = () => {
+      console.log("✅ Socket conectado (handleConnect)");
+
+      if (user?.uid) {
+        console.log("📨 Registrando usuario:", user.uid);
+        socket.emit("register-user", user.uid);
+        socket.emit("join", user.uid);
+      }
+
+      initSocketListeners(); // si tienes listeners personalizados
+    };
+
+    const handleDisconnect = () => {
+      console.log("🔌 Socket desconectado");
+    };
+
+    const handleError = (err: any) => {
+      console.log("❌ Error en socket:", err);
+    };
+
+    socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("connect_error", handleError);
+
+    return () => {
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.off("connect_error", handleError);
+      removeSocketListeners?.();
+    };
+  }, [user?.uid]);
+
+  useEffect(() => {
+    if (tripDetail) {
+      bottomSheetRef.current?.snapToIndex(0)
+    } else {
+      bottomSheetRef.current?.snapToIndex(1)
+    }
+  }, [tripDetail]);
+
+  useEffect(() => {
+    if (endTrip === true) {
+      setServiceMarkers({
+        origin: { latitude: 0, longitude: 0 },
+        destination: { latitude: 0, longitude: 0 }
+      });
+
+      useServiceBusinessStore.setState({ endTrip: null });
+      bottomSheetRef.current?.snapToIndex(1)
+      setStatusPanDown(false);
+    }
+  }, [endTrip]);
+
+  useEffect(() => {
+    if (!lastKnowLocation) {
+      getLocation();
+    }
+  }, [lastKnowLocation]);
+
+  if (lastKnowLocation === null) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <CarLoading />
+      </View>
+    );
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Bienvenido a la App</Text>
+    <>
+      <GestureHandlerRootView style={globalStyle.GlobalContainerCustom}>
+        <View style={StyleSheet.absoluteFillObject}>
+          <StatusBar backgroundColor="#FFBC07" barStyle="dark-content" />
+          <Maps initialLocation={lastKnowLocation}
+            polyline={polyline} markers={serviceMarkers} tripCurrent={tripCurrent}
+            vehicle={user?.vehicleType}
+            onDestinationChange={(coords) => {
+              setServiceMarkers(prev => ({
+                ...prev,
+                destination: coords
+              }));
+            }}
+          />
+          <View style={{
+            position: 'absolute',
+            top: 50,
+            left: 20,
+            zIndex: 10,
+            elevation: 10,
+            shadowColor: "#000"
+          }}>
+            <TouchableOpacity
+              onPress={() => {
+                toggleModal('modal2');
+              }}
+            >
+              <IconMenu />
+            </TouchableOpacity>
+          </View>
+          <BottomSheet
+            ref={bottomSheetRef}
+            backgroundStyle={{ backgroundColor: '#EDF9FD' }}
+            index={1}
+            enablePanDownToClose={statusPanDown}
+            enableContentPanningGesture={statusPanDown}
+            enableHandlePanningGesture={statusPanDown}
+            keyboardBehavior="interactive"
+            snapPoints={snapPoints}
+            onChange={(index) => {
+              if (index === 0) {
+                Keyboard.dismiss();
+              }
+            }}
+            handleIndicatorStyle={globalStyle.handleIndicatorStyleCustom}
+            handleStyle={globalStyle.handleStyleCustom}
+          >
+            <BottomSheetScrollView
+              contentContainerStyle={{
+                alignItems: 'center',
+                justifyContent: 'flex-start',
+                flex: 1,
+                paddingBottom: 24,
+                backgroundColor: '#EDF9FD',
+              }}
+              style={{ flex: 1 }}
+              keyboardShouldPersistTaps="handled"
+            >
+              {
+                tripCurrent ? (
+                  <CurrentTripScreen trip={tripCurrent}
+                    tripCurrentVehicle={tripCurrentVehicle}
+                    tripCurrentClient={tripCurrentClient}
+                    user={user}
+                    comments={comments}
+                    tripStarted={tripStarted}
+                  />
+                ) : tripDetail ? (
+                  <ServiceDetailScreen
+                    btnDisable={btnDisable}
+                    trip={tripDetail}
+                    setTripDetail={setTripDetail}
+                    onConfirm={async () => {
+                      setBtnDisable(true);
+                      await postAcceptedTrip(tripDetail.uid);
+                      setBtnDisable(false);
+                      setTripDetail(null);
+                    }}
+                  />
+                ) : (
+                  <ServiceScreen
+                    setServiceMarkers={setServiceMarkers}
+                    setTripDetail={setTripDetail}
+                  />
+                )
+              }
+            </BottomSheetScrollView>
+          </BottomSheet>
+        </View>
+      </GestureHandlerRootView>
+      {travelState === "sending" ? (
+        <View style={globalStyle.cancelModalView}>
+          <Text style={globalStyle.titleCancelView}>¿Quieres cancelar el viaje?</Text>
+          <TouchableOpacity style={{ marginHorizontal: 40 }}
+            onPress={async () => {
+              if (tripCurrent?.uid) {
+                await postCancelTrip(tripCurrent?.uid);
+                bottomSheetRef.current?.snapToIndex(1);
+                setServiceMarkers({
+                  origin: { latitude: 0, longitude: 0 },
+                  destination: { latitude: 0, longitude: 0 }
+                });
+              } else {
+                console.warn("No se encontró un tripId válido para cancelar");
+              }
+            }}
+          >
+            <Text style={{ color: 'red', fontSize: 16 }}>Cancelar</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null
+      }
+      <Modal
+        isVisible={modalVisible.modal2}
+        onBackdropPress={() => toggleModal('modal2')}
+        backdropOpacity={0.5}
+        animationIn="slideInLeft"
+        animationOut="slideOutLeft"
+        style={{ margin: 0, justifyContent: 'flex-start' }}
+      >
+        <View style={globalStyle.modalContainerMenuChildren}>
+          <Text style={globalStyle.headerMenu}>Menú</Text>
+          <Text style={globalStyle.headerNameMenu}>Hola {user?.name ?? "Usuario"} 👋</Text>
+          <View style={globalStyle.headerLine} />
+          <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 20 }}>
+            <TouchableOpacity style={globalStyle.menuItem}
+              onPress={() => {
+                bottomSheetRef.current?.snapToIndex(1);
+                toggleModal('modal2');
+              }}>
+              <FontAwesome6 name="car" size={20} color="#333" style={globalStyle.icon} iconStyle="solid" />
+              <Text style={globalStyle.menuText}>Viajemos</Text>
+            </TouchableOpacity>
 
-      <Text style={styles.subtitle}>¡Has iniciado sesión correctamente lambebicho!</Text>
+            <TouchableOpacity style={globalStyle.menuItem}
+              onPress={() => {
+                navigation.navigate('HistoryTripScreen');
+                toggleModal('modal2');
+              }}>
+              <FontAwesome6 name="clock-rotate-left" size={20} color="#333" style={globalStyle.icon} iconStyle="solid" />
+              <Text style={globalStyle.menuText}>Mi actividad</Text>
+            </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={handleLogout}>
-        <Text style={styles.buttonText}>Cerrar sesión</Text>
-      </TouchableOpacity>
-    </View>
+            <TouchableOpacity style={globalStyle.menuItem}
+              onPress={() => {
+                navigation.navigate("ContactUsScreen");
+                toggleModal('modal2');
+              }}>
+              <FontAwesome6 name="headset" size={20} color="#333" style={globalStyle.icon} iconStyle="solid" />
+              <Text style={globalStyle.menuText}>Contáctanos</Text>
+            </TouchableOpacity>
+
+            <View style={globalStyle.divider} />
+            <View style={{ justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 20 }}>
+              <TouchableOpacity style={globalStyle.menuItem} onPress={() => logOut()}>
+                <FontAwesome6 name="right-from-bracket" size={20} color="red" style={globalStyle.icon} iconStyle="solid" />
+                <Text style={[globalStyle.menuText, { color: 'red' }]}>Cerrar sesión</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 };
-
-const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: '#000000',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 20,
-    },
-    title: {
-      fontSize: 26,
-      fontWeight: 'bold',
-      marginBottom: 10,
-    },
-    subtitle: {
-      fontSize: 18,
-      color: '#fff',
-      marginBottom: 30,
-      textAlign: 'center',
-    },
-    button: {
-      backgroundColor: '#FFBC07',
-      paddingVertical: 12,
-      paddingHorizontal: 30,
-      borderRadius: 8,
-    },
-    buttonText: {
-      color: '#fff',
-      fontSize: 16,
-      fontWeight: 'bold',
-    },
-  });
-  

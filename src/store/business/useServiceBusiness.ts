@@ -1,0 +1,475 @@
+import { create } from "zustand";
+import Toast from 'react-native-toast-message';
+
+import {
+    tripPostResponse, Users,
+    vehicle, contactUsResponse, tripsHistoryResponse,
+    Comments, LatLng, SurveyResponse, trip,
+    responseTripActive, tripsAvailableResponse, tripsAcceptedResponse
+} from '../../interface/interface';
+import apiConfig from "../../apiConfig/apiConfig";
+import { socket } from '../../utils/socketioClient';
+
+type TravelState = 'idle' | 'sending' | 'in_progress';
+
+interface BusinessState {
+    tripsHistory: tripsHistoryResponse[] | null;
+    comments: Comments[] | null;
+    travelState: TravelState;
+    tripCurrent: trip | null;
+    tripsAvailable: trip[] | null;
+    tripCurrentVehicle: vehicle | null;
+    tripCurrentClient: Users | null;
+    polyline: { latitude: number; longitude: number }[] | null;
+    positionDriverEvent: LatLng | null;
+    tripStarted: boolean;
+    endTrip: boolean | null;
+    polylineType: string;
+    message: string;
+    errorMessage: string;
+    removeSocketListeners: () => void;
+    getHistoryTrip: () => Promise<void>;
+    postContactUs: (comment: string) => Promise<void>;
+    postAcceptedTrip: (id: string) => Promise<void>;
+    postDriverArrived: (id: string) => Promise<void>;
+    postTripEnd: (id: string) => Promise<void>;
+    postTripStarted: (id: string) => Promise<void>;
+    tripRejected: (id: string) => Promise<void>;
+    postCancelTrip: (id: string) => Promise<void>;
+    postCommentsTrip: (comment: string, id: string) => Promise<void>;
+    getCommentsTrip: (id: string) => Promise<void>;
+    postSendLocation: (latitude: number, longitude: number) => Promise<void>;
+    getActiveTrip: () => Promise<void>;
+    getTripAvailable: () => Promise<void>;
+    getVehicle: () => Promise<void>;
+    postSurvey: (id: string, feeback: string, score: number) => Promise<void>;
+    initSocketListeners: () => void;
+    set: (state: Partial<BusinessState>) => void;
+};
+
+interface Props {
+    type: string;
+    title: string;
+    message: string;
+    visibilityTime: number;
+};
+
+const showToast = ({ type, title, message, visibilityTime }: Props) => {
+    Toast.show({
+        type: type,
+        text1: title,
+        text2: message,
+        visibilityTime: visibilityTime
+    });
+};
+
+export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
+    tripsHistory: null,
+    tripCurrent: null,
+    tripCurrentVehicle: null,
+    travelState: 'idle',
+    tripCurrentClient: null,
+    tripsAvailable: null,
+    comments: [],
+    polyline: null,
+    polylineType: "",
+    positionDriverEvent: null,
+    tripStarted: false,
+    endTrip: null,
+    errorMessage: "",
+    message: "",
+    set: (state) => set(state),
+
+    initSocketListeners: () => {
+        socket.on("trip_assigned", ({ trip, vehicle, client }: any) => {
+
+            set({
+                tripCurrent: trip,
+                tripCurrentVehicle: vehicle,
+                tripCurrentClient: client,
+            });
+
+            showToast({
+                type: "success",
+                title: "Viaje aceptado",
+                message: "Ya avisamos al cliente",
+                visibilityTime: 6000
+            });
+        });
+
+        socket.on("trip_driverArrived", ({ trip }: { trip: trip }) => {
+            set({
+                tripCurrent: trip
+            });
+
+            showToast({
+                type: "success",
+                title: "Ya llegaste",
+                message: "El cliente te espera.",
+                visibilityTime: 6000
+            });
+        });
+
+        socket.on("new-comment", (comment) => {
+
+            const prevComments = get().comments ?? [];
+            set({ comments: [...prevComments, comment] });
+
+        });
+
+        socket.on("client_route_accepted", ({ polyline, polylineType, positionDriverEvent }) => {
+
+            set({ polyline, polylineType, positionDriverEvent });
+        });
+
+        socket.on("trip_started", ({ polyline, polylineType }) => {
+
+            set({ polyline, polylineType, tripStarted: true, travelState: "in_progress" });
+        });
+
+        socket.on("client_driver_update", ({ position }) => {
+
+            set({
+                positionDriverEvent: position
+            });
+        });
+
+        socket.on("trip_canceled", ({ tripId }) => {
+
+            set({
+                tripCurrentVehicle: null,
+                polyline: null,
+                endTrip: true,
+                tripCurrent: null,
+                polylineType: "",
+                tripCurrentClient: null,
+                tripStarted: false,
+                travelState: "idle",
+                comments: []
+            });
+
+            showToast({
+                type: "error",
+                title: "Viaje cancelado",
+                message: "El cliente canceló el viaje.",
+                visibilityTime: 5000
+            });
+        });
+
+        socket.on("new_trip_request", (data) => {
+            const newTrip = {
+                uid: data.tripId,
+                addressStart: data.origin.address,
+                addressEnd: data.destination.address,
+                latitudeStart: data.origin.lat,
+                longitudeStart: data.origin.lng,
+                latitudeEnd: data.destination.lat,
+                longitudeEnd: data.destination.lng,
+                price: data.price,
+                estimatedArrival: data.estimatedArrival,
+            };
+
+            set((state): any => {
+                const alreadyExists = state.tripsAvailable?.some(
+                    (trip) => trip.uid === newTrip.uid
+                );
+
+                if (alreadyExists) return state;
+
+                return {
+                    tripsAvailable: [...(state.tripsAvailable || []), newTrip],
+                };
+            });
+        });
+
+    },
+
+    removeSocketListeners: () => {
+        socket.off("trip_assigned");
+        socket.off("trip_canceled");
+        socket.off("trip_driverArrived");
+        socket.off("new-comment");
+        socket.off("client_route_accepted");
+        socket.off("trip_started");
+        socket.off("trip_end");
+        socket.off("client_driver_update");
+    },
+
+    tripRejected: async (
+        id
+    ) => {
+
+        try {
+
+            await apiConfig.post(`/tripCalculate/${id}`);
+
+        } catch (error: any) {
+            set({
+                errorMessage: error.response?.data?.msg || "Error al calcular el viaje"
+            });
+        }
+    },
+
+    postContactUs: async (comment: string) => {
+
+        try {
+
+            const { data } = await apiConfig.post<contactUsResponse>(`/contactUs/driver/`, { comment });
+
+            // Validar si la respuesta es un error
+            if (data.usersDriverId !== "") {
+                showToast({
+                    type: "success",
+                    title: "¡Mensaje enviado!",
+                    message: "Gracias por contactarnos. Te responderemos pronto.",
+                    visibilityTime: 6000
+                });
+
+                return;
+            };
+
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
+        }
+    },
+
+    getHistoryTrip: async () => {
+
+        try {
+            const { data } = await apiConfig.get<tripsHistoryResponse[]>(`/historyTripsDriver/`);
+
+            set({
+                tripsHistory: data
+            });
+
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
+        }
+    },
+
+    postSurvey: async (id: string, feedback: string, score: number) => {
+
+        try {
+            await apiConfig.post<SurveyResponse>(`/surveys/driversSurveys/${id}`, { feedback, score });
+
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
+        }
+    },
+
+    postCancelTrip: async (id: string) => {
+
+        try {
+
+            const data = await apiConfig.post<tripPostResponse>(`/cancelTrip/clientCancelTrip/${id}`);
+
+            if (!data.data) {
+                return
+            }
+
+            showToast({
+                type: "success",
+                title: "¡Viaje Cancelado!",
+                message: "Tu viaje ha sido cancelado.",
+                visibilityTime: 6000
+            });
+
+            set({
+                tripCurrentVehicle: null,
+                tripCurrentClient: null,
+                tripCurrent: null,
+                polyline: null,
+                polylineType: "",
+                positionDriverEvent: null,
+                travelState: "idle"
+            });
+
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
+        }
+    },
+
+    getActiveTrip: async () => {
+
+        try {
+
+            const data = await apiConfig.get<responseTripActive>(`/trip/`);
+
+            if (!data.data.response) {
+                return;
+            }
+
+            if (data.data.response.tripStarted === true) {
+                set({
+                    tripStarted: true,
+                    travelState: "in_progress",
+                    tripCurrent: data.data.response,
+                    tripCurrentVehicle: data.data.vehicleData,
+                    tripCurrentClient: data.data.userData
+                });
+                return
+            }
+
+            set({
+                travelState: "sending",
+                tripCurrent: data.data.response,
+                tripCurrentVehicle: data.data.vehicleData,
+                tripCurrentClient: data.data.userData
+            });
+
+
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
+        }
+    },
+    postCommentsTrip: async (comment: string, id: string) => {
+
+        try {
+            console.log("paso desde el mensaje")
+            await apiConfig.post<Comments[]>(`/commentDriver/${id}`, { comment });
+
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
+        }
+    },
+
+    getCommentsTrip: async (id: string) => {
+
+        try {
+            const { data } = await apiConfig.get<Comments[]>(`/commentDriver/${id}`);
+
+            set({
+                comments: data
+            });
+
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
+        }
+    },
+
+    getTripAvailable: async () => {
+
+        try {
+
+            const { data } = await apiConfig.get<tripsAvailableResponse>(`/trip/available`);
+
+            set({
+                tripsAvailable: data.trips
+            });
+
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
+        }
+    },
+
+    postAcceptedTrip: async (id: string) => {
+
+        try {
+
+            const { data } = await apiConfig.post<tripsAcceptedResponse>(`/trip/driverAccepted/${id}`);
+            if (!data.success) {
+                return;
+            }
+
+            set({
+                tripCurrentClient: data.user,
+                tripCurrent: data.trip
+            })
+
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
+        }
+    },
+
+    postDriverArrived: async (id: string) => {
+
+        try {
+
+            const { data } = await apiConfig.post<tripsAcceptedResponse>(`/trip/driverArrived/${id}`);
+            if (!data.success) {
+                return;
+            }
+
+            set({
+                tripCurrent: data.trip
+            })
+
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
+        }
+    },
+
+    postTripStarted: async (id: string) => {
+
+        try {
+
+            const { data } = await apiConfig.post<any>(`/trip/tripStarted/${id}`);
+
+            set({ polyline: data.polyline, polylineType: data.polylineType, tripCurrent: data.trip, tripStarted: true, travelState: "in_progress" });
+
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
+        }
+    },
+
+    postTripEnd: async (id: string) => {
+
+        try {
+
+            await apiConfig.post<tripsAcceptedResponse>(`/trip/tripEnd/${id}`);
+
+            set({
+                tripCurrentVehicle: null,
+                tripCurrentClient: null,
+                polyline: null,
+                tripCurrent: null,
+                polylineType: "",
+                positionDriverEvent: null,
+                tripStarted: false,
+                endTrip: true,
+                travelState: "idle"
+            });
+
+            showToast({
+                type: "success",
+                title: "Viaje Finalizado",
+                message: "Gracias por usar nuestro servicio.",
+                visibilityTime: 5000
+            });
+
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
+        }
+    },
+
+
+    getVehicle: async () => {
+
+        try {
+
+            const { data } = await apiConfig.post<vehicle>(`/vehicles/`);
+
+            set({
+                tripCurrentVehicle: data
+            })
+
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
+        }
+    },
+
+    postSendLocation: async (latitude: number, longitude: number) => {
+
+        try {
+
+            await apiConfig.post(`/driver/location/`, {
+                latitude,
+                longitude
+            });
+
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
+        }
+    }
+
+}));

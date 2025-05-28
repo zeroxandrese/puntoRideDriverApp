@@ -4,12 +4,13 @@ import { View } from 'react-native';
 
 import { RootStackParamList } from '../interface/interface';
 import { LoginScreen } from '../screen/LoginScreen';
-// import { CodePhoneValidationScreen } from '../screen/CodePhoneValidationScreen';
 import { HomeScreen } from '../screen/HomeScreen';
 import { PermissionsScreen } from '../screen/PermissionsScreen';
 import { userPermissionStore } from '../store/permissions/userPermissionStore';
 import useAuthStore from '../globalState/globalState';
 import CarLoading from '../components/cardLoading';
+import { ContactUsScreen } from '../screen/ContactUsScreen';
+import { HistoryTripScreen } from '../screen/HistoryTripScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -43,13 +44,22 @@ export const StackNavigationInitial = () => {
   }
 
   return (
-    <Stack.Navigator
-      initialRouteName={getInitialRoute()}
-      screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="HomeScreen" component={HomeScreen} />
-      <Stack.Screen name="PermissionsScreen" component={PermissionsScreen} />
-      <Stack.Screen name="Login" component={LoginScreen} />
-      {/* <Stack.Screen name="CodePhoneValidation" component={CodePhoneValidationScreen} /> */}
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {
+        status !== 'authenticated' ? (
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+          </>
+        ) : locationStatus !== 'granted' ? (
+          <Stack.Screen name="PermissionsScreen" component={PermissionsScreen} />
+        ) : (
+          <>
+            <Stack.Screen name="HomeScreen" component={HomeScreen} />
+            <Stack.Screen name="ContactUsScreen" component={ContactUsScreen} />
+            <Stack.Screen name="HistoryTripScreen" component={HistoryTripScreen} />
+          </>
+        )
+      }
     </Stack.Navigator>
   );
 };

@@ -30,7 +30,7 @@ export const LoginScreen = () => {
   });
 
   const toggleModal = (modalName: string) => {
-    setModalVisible((prev: any) => ({
+    setModalVisible((prev) => ({
       ...prev,
       [modalName]: !prev[modalName],
     }));

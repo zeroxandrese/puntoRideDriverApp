@@ -14,8 +14,10 @@ import { useServiceBusinessStore } from "../store/business/useServiceBusiness";
 import { useForm } from '../components/useForm';
 import AvataroutProfile2 from '../assets/avataroutProfile2.svg';
 import { globalStyle } from '../theme/global.style';
+import { CurrentTripScreenProps, Comments } from '../interface/interface';
+import { ComentarioTrip } from '../interface/errores';
 
-export const CurrentTripScreen = ({ trip, tripCurrentVehicle, tripCurrentClient, user, comments, tripStarted }: any) => {
+export const CurrentTripScreen = ({ trip, tripCurrentVehicle, tripCurrentClient, user, comments, tripStarted }: CurrentTripScreenProps) => {
   const arrivalDriver = parseInt(trip.arrivalInitial || '1');
   const initialTime = arrivalDriver * 60;
 
@@ -269,7 +271,7 @@ export const CurrentTripScreen = ({ trip, tripCurrentVehicle, tripCurrentClient,
 
 
               {Array.isArray(comments) && comments.length > 0 ? (
-                comments.map((item: any) => (
+                comments.map((item: Comments) => (
                   <View
                     key={item.uid}
                     style={{

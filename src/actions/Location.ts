@@ -14,7 +14,9 @@ export const getCurrentLocation = async (): Promise<Location>=> {
         console.log("Can't get location")
         reject(error)
     },{
-        enableHighAccuracy: true
+        enableHighAccuracy: true,
+        timeout: 5000,  // Tiempo máximo de espera: 5 segundos
+        maximumAge: 2000  // Usar caché de ubicación de máximo 2 segundos
     })
  })
 }

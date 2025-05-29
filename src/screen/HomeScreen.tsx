@@ -4,10 +4,12 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
-import { socket } from '../utils/socketioClient';
+import { useSocket, useSocketTrip } from '../context/SocketContext';
+import { useSocketEvents } from '../hooks/useSocketEvents';
 import Modal from 'react-native-modal';
 
 import { RootStackParamList, LatLng, trip } from '../interface/interface';
+import { ModalVisibilidad } from '../interface/errores';
 import CarLoading from '../components/cardLoading';
 import { Maps } from "../components/Maps";
 import { useLocationStore } from '../store/location/locationStore';
@@ -37,6 +39,11 @@ export const HomeScreen = () => {
     tripCurrentClient, initSocketListeners, comments,
     polyline, tripStarted, travelState, set, postCancelTrip,
     removeSocketListeners, getActiveTrip, postAcceptedTrip, getVehicle, endTrip } = useServiceBusinessStore();
+  const { conectado, estadoConexion, emitir } = useSocket();
+  const { confirmarViaje } = useSocketTrip();
+  
+  // Inicializar listeners de eventos socket
+  useSocketEvents();
 
   const [serviceMarkers, setServiceMarkers] = useState<{ origin: LatLng; destination: LatLng }>({
     origin: { latitude: 0, longitude: 0 },
@@ -49,7 +56,7 @@ export const HomeScreen = () => {
   });
 
   const toggleModal = (modalName: string) => {
-    setModalVisible((prev: any) => ({
+    setModalVisible((prev) => ({
       ...prev,
       [modalName]: !prev[modalName],
     }));
@@ -60,23 +67,25 @@ export const HomeScreen = () => {
   }, []);
 
   useEffect(() => {
-    // Emitir confirm-trip solo si ya está conectado
-    if (socket.connected && tripCurrent?.uid) {
+    // Emitir confirmación cuando haya un viaje activo y esté conectado
+    if (conectado && tripCurrent?.uid) {
       setStatusPanDown(true);
-      socket.emit("confirm-trip", { tripId: tripCurrent.uid });
-    } else if (tripCurrent?.uid) {
-      // Esperar a que conecte
-      const handleConnect = () => {
-        socket.emit("confirm-trip", { tripId: tripCurrent.uid });
-      };
-      socket.once("connect", handleConnect);
-      return () => {
-        socket.off("connect", handleConnect);
-      };
+      confirmarViaje(tripCurrent.uid);
     }
-  }, [tripCurrent?.uid]);
+  }, [tripCurrent?.uid, conectado, confirmarViaje]);
 
   useEffect(() => {
+    // Socket connection is now managed by SocketProvider
+    const initializeData = async () => {
+      // Conectar socket con autenticación
+      const connected = await conectarSocketConAuth();
+      
+      if (!connected) {
+        console.log("❌ No se pudo conectar el socket (sin autenticación)");
+        return;
+      }
+    };
+
     const handleConnect = () => {
       console.log("✅ Socket conectado (handleConnect)");
 
@@ -86,16 +95,21 @@ export const HomeScreen = () => {
         socket.emit("join", user.uid);
       }
 
-      initSocketListeners(); // si tienes listeners personalizados
+      // Socket listeners now managed by useSocketEvents hook // si tienes listeners personalizados
     };
 
     const handleDisconnect = () => {
       console.log("🔌 Socket desconectado");
     };
 
-    const handleError = (err: any) => {
-      console.log("❌ Error en socket:", err);
+    const handleError = (err: Error) => {
+      console.log("❌ Error en socket:", err.message);
     };
+
+    // Inicializar conexión autenticada
+    if (user?.uid) {
+      initializeSocket();
+    }
 
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
@@ -105,7 +119,8 @@ export const HomeScreen = () => {
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
       socket.off("connect_error", handleError);
-      removeSocketListeners?.();
+      // Cleanup now handled by useSocketEvents hook
+      desconectarSocket();
     };
   }, [user?.uid]);
 

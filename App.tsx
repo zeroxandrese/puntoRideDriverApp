@@ -1,6 +1,6 @@
 import './gesture-handler';
 import { useEffect } from 'react';
-import { AppState, BackHandler } from 'react-native';
+import { AppState, BackHandler, LogBox } from 'react-native';
 import Toast from 'react-native-toast-message';
 //import * as Sentry from "@sentry/react-native";
 //import { SENTRY_DSN } from "@env";
@@ -10,7 +10,10 @@ import FontAwesome6 from '@react-native-vector-icons/fontawesome6';
 import { NavigationContainer } from '@react-navigation/native';
 import { StackNavigationRoot } from './src/stacks/StackNavigationRoot';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { socket } from '../puntoRideDriverApp/src/utils/socketioClient';
+// Socket management now handled by SocketProvider
+import { AppErrorBoundary } from './src/components/ErrorBoundary';
+import servicioLogger from './src/utils/servicioLogger';
+import { SocketProvider } from './src/context/SocketContext';
 
 // Inicialización de Sentry
 /* Sentry.init({
@@ -21,6 +24,7 @@ import { socket } from '../puntoRideDriverApp/src/utils/socketioClient';
   },
 }); */
 
+LogBox.ignoreAllLogs(true);
 
 export const App = () => {
 
@@ -30,37 +34,35 @@ export const App = () => {
     return () => backHandler.remove();
   }, []);
 
-  useEffect(() => {
-    const handleAppStateChange = (state: string) => {
-      if (state === "active") {
-        if (!socket.connected) {
-          console.log("🔄 App volvió al frente, reconectando socket...");
-          socket.connect();
-        }
-      }
-    };
-
-    const sub = AppState.addEventListener("change", handleAppStateChange);
-    return () => sub.remove();
-  }, []);
+  // App state changes now handled by gestorSocket
 
   return (
-    <>
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <PaperProvider
-        settings={{
-          icon: (props) => <FontAwesome6 {...props} name={props.name as any} iconStyle='solid' 
-          size={props.size || 10}
-          />
-        }}
-      >
-        <NavigationContainer>
-          <StackNavigationRoot />
-        </NavigationContainer>
-      </PaperProvider>
-    </GestureHandlerRootView>
-    <Toast />
-    </>
+    <AppErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <PaperProvider
+          settings={{
+            icon: (props) => <FontAwesome6 {...props} name={props.name as any} iconStyle='solid' 
+            size={props.size || 10}
+            />
+          }}
+        >
+          <NavigationContainer
+            onStateChange={(state) => {
+              // Log de navegación en desarrollo
+              if (__DEV__ && state) {
+                const currentRoute = state.routes[state.index];
+                servicioLogger.info(`Navegación: ${currentRoute.name}`, { params: currentRoute.params });
+              }
+            }}
+          >
+            <SocketProvider>
+              <StackNavigationRoot />
+            </SocketProvider>
+          </NavigationContainer>
+        </PaperProvider>
+      </GestureHandlerRootView>
+      <Toast />
+    </AppErrorBoundary>
   )
 }
 

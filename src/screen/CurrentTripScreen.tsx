@@ -14,9 +14,26 @@ import { useServiceBusinessStore } from "../store/business/useServiceBusiness";
 import { useForm } from '../components/useForm';
 import AvataroutProfile2 from '../assets/avataroutProfile2.svg';
 import { globalStyle } from '../theme/global.style';
+import { CurrentTripScreenProps, Comments } from '../interface/interface';
+import { ComentarioTrip } from '../interface/errores';
 
-export const CurrentTripScreen = ({ trip, tripCurrentVehicle, tripCurrentClient, user, comments, tripStarted }: any) => {
-  const arrivalDriver = parseInt(trip.arrivalInitial || '1');
+const parseEstimatedArrival = (estimatedArrival: string): number => {
+  const [value, unit] = estimatedArrival.toLowerCase().split(" ");
+
+  const numericValue = parseInt(value, 10);
+
+  if (isNaN(numericValue)) return 0;
+
+  if (unit.startsWith("hour")) {
+    return numericValue * 60;
+  }
+
+  return numericValue;
+};
+
+export const CurrentTripScreen = ({ trip, tripCurrentVehicle, tripCurrentClient, user, comments, tripStarted }: CurrentTripScreenProps) => {
+  const arrivalInMinutes = parseEstimatedArrival(trip.estimatedArrival);
+  const arrivalDriver = arrivalInMinutes || 1;
   const initialTime = arrivalDriver * 60;
 
   const { getCommentsTrip, postCommentsTrip, postDriverArrived, postTripEnd, postTripStarted } = useServiceBusinessStore();
@@ -268,8 +285,8 @@ export const CurrentTripScreen = ({ trip, tripCurrentVehicle, tripCurrentClient,
               <Text style={globalStyle.sectionTitle}>💬 Chat</Text>
 
 
-              {Array.isArray(comments) && comments.length > 0 ? (
-                comments.map((item: any) => (
+              {user && Array.isArray(comments) && comments.length > 0 ? (
+                comments.map((item: Comments) => (
                   <View
                     key={item.uid}
                     style={{

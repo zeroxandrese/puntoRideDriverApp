@@ -4,5 +4,7 @@ declare module '@env' {
     export const key: string;
     export const GOOGLE_MAPS_API_KEY: string;
     export const webClientId: string;
+    export const SERVICIO_KEYCHAIN: string;
+    export const CLAVE_TOKEN_LEGACY: string;
 
 }

@@ -188,3 +188,11 @@ export interface tripsAcceptedResponse {
   success: boolean
 }
 
+export interface CurrentTripScreenProps {
+  trip: trip;
+  tripCurrentVehicle: vehicle | null;
+  tripCurrentClient: Users | null;
+  user: Driver | null;
+  comments: Comments[] | null;
+  tripStarted: boolean | null;
+}

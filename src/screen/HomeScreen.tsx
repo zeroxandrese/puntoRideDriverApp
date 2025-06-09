@@ -4,10 +4,12 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
-import { socket } from '../utils/socketioClient';
+import { useSocket, useSocketTrip } from '../context/SocketContext';
+import { useSocketEvents } from '../hooks/useSocketEvents';
 import Modal from 'react-native-modal';
 
 import { RootStackParamList, LatLng, trip } from '../interface/interface';
+import { ModalVisibilidad } from '../interface/errores';
 import CarLoading from '../components/cardLoading';
 import { Maps } from "../components/Maps";
 import { useLocationStore } from '../store/location/locationStore';
@@ -23,6 +25,8 @@ import useSendLocation from '../components/useSendLocation';
 
 type NavigationProps = StackNavigationProp<RootStackParamList, "HomeScreen">;
 
+type ModalName = 'modal1' | 'modal2';
+
 export const HomeScreen = () => {
   useSendLocation();
   const navigation = useNavigation<NavigationProps>();
@@ -34,22 +38,27 @@ export const HomeScreen = () => {
   const [btnDisable, setBtnDisable] = useState(false)
   const bottomSheetRef = useRef<BottomSheet>(null);
   const { tripCurrent, tripCurrentVehicle,
-    tripCurrentClient, initSocketListeners, comments,
+    tripCurrentClient, comments,
     polyline, tripStarted, travelState, set, postCancelTrip,
-    removeSocketListeners, getActiveTrip, postAcceptedTrip, getVehicle, endTrip } = useServiceBusinessStore();
+     getActiveTrip, postAcceptedTrip, getVehicle, endTrip } = useServiceBusinessStore();
+  const { conectado, estadoConexion, emitir } = useSocket();
+  const { confirmarViaje } = useSocketTrip();
+  
+  // Inicializar listeners de eventos socket
+  useSocketEvents();
 
   const [serviceMarkers, setServiceMarkers] = useState<{ origin: LatLng; destination: LatLng }>({
     origin: { latitude: 0, longitude: 0 },
     destination: { latitude: 0, longitude: 0 }
   });
 
-  const [modalVisible, setModalVisible] = useState({
+  const [modalVisible, setModalVisible] = useState<Record<ModalName, boolean>>({
     modal1: false,
     modal2: false
   });
 
-  const toggleModal = (modalName: string) => {
-    setModalVisible((prev: any) => ({
+  const toggleModal = (modalName: ModalName) => {
+    setModalVisible((prev) => ({
       ...prev,
       [modalName]: !prev[modalName],
     }));
@@ -60,54 +69,12 @@ export const HomeScreen = () => {
   }, []);
 
   useEffect(() => {
-    // Emitir confirm-trip solo si ya está conectado
-    if (socket.connected && tripCurrent?.uid) {
+    // Emitir confirmación cuando haya un viaje activo y esté conectado
+    if (conectado && tripCurrent?.uid) {
       setStatusPanDown(true);
-      socket.emit("confirm-trip", { tripId: tripCurrent.uid });
-    } else if (tripCurrent?.uid) {
-      // Esperar a que conecte
-      const handleConnect = () => {
-        socket.emit("confirm-trip", { tripId: tripCurrent.uid });
-      };
-      socket.once("connect", handleConnect);
-      return () => {
-        socket.off("connect", handleConnect);
-      };
+      confirmarViaje(tripCurrent.uid);
     }
-  }, [tripCurrent?.uid]);
-
-  useEffect(() => {
-    const handleConnect = () => {
-      console.log("✅ Socket conectado (handleConnect)");
-
-      if (user?.uid) {
-        console.log("📨 Registrando usuario:", user.uid);
-        socket.emit("register-user", user.uid);
-        socket.emit("join", user.uid);
-      }
-
-      initSocketListeners(); // si tienes listeners personalizados
-    };
-
-    const handleDisconnect = () => {
-      console.log("🔌 Socket desconectado");
-    };
-
-    const handleError = (err: any) => {
-      console.log("❌ Error en socket:", err);
-    };
-
-    socket.on("connect", handleConnect);
-    socket.on("disconnect", handleDisconnect);
-    socket.on("connect_error", handleError);
-
-    return () => {
-      socket.off("connect", handleConnect);
-      socket.off("disconnect", handleDisconnect);
-      socket.off("connect_error", handleError);
-      removeSocketListeners?.();
-    };
-  }, [user?.uid]);
+  }, [tripCurrent?.uid, conectado, confirmarViaje]);
 
   useEffect(() => {
     if (tripDetail) {

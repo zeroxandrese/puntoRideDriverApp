@@ -1,6 +1,7 @@
 import { create } from "zustand";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import almacenamientoSeguro from '../utils/almacenamientoSeguro';
 import apiConfig from "../apiConfig/apiConfig";
+import { desconectarSocket } from '../utils/socketioClient';
 
 import {
    Driver,
@@ -8,6 +9,7 @@ import {
    PostDriverResponse,
    registerData
 } from '../interface/interface';
+import { ErrorAPI, obtenerMensajeError } from '../interface/errores';
 
 interface AuthState {
   token: string | null;
@@ -29,7 +31,7 @@ const useAuthStore = create<AuthState>((set, get) => ({
 
   checkToken: async () => {
     try {
-      const token = await AsyncStorage.getItem("token");
+      const token = await almacenamientoSeguro.obtenerToken();
       if (!token) {
         set({ status: "not-authenticated", token: null, user: null });
         return;
@@ -52,15 +54,21 @@ const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const { data } = await apiConfig.post<PostDriverResponse>("/authDriver/login", { email, password });
    
-      await AsyncStorage.setItem("token", data.token);
+      await almacenamientoSeguro.guardarCredenciales({ 
+        token: data.token, 
+        email, 
+        userId: data.user.uid 
+      });
       set({ token: data.token, user: data.user, status: "authenticated" });
-    } catch (error: any) {
-      set({ errorMessage: error.response?.data?.msg || "Error al iniciar sesión" });
+    } catch (error) {
+      const errorAPI = error as ErrorAPI;
+      set({ errorMessage: obtenerMensajeError(errorAPI) });
     }
   },
 
   logOut: async () => {
-    await AsyncStorage.removeItem("token");
+    await almacenamientoSeguro.eliminarCredenciales();
+    desconectarSocket();
     set({ token: null, user: null, status: "not-authenticated" });
   },
 
@@ -69,12 +77,19 @@ const useAuthStore = create<AuthState>((set, get) => ({
 
       const { data } = await apiConfig.post<PostDriverResponse>(`/usersDriver/`, { email, password, code });
 
+      await almacenamientoSeguro.guardarCredenciales({ 
+        token: data.token, 
+        email, 
+        userId: data.user.uid 
+      });
       set({
         user: data.user,
-        token: data.token
+        token: data.token,
+        status: "authenticated"
       });
-    } catch (error: any) {
-      set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
+    } catch (error) {
+      const errorAPI = error as ErrorAPI;
+      set({ errorMessage: obtenerMensajeError(errorAPI) });
     }
   }
 

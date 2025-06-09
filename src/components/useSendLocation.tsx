@@ -5,6 +5,8 @@ import { useLocationStore } from '../store/location/locationStore';
 import { Location } from '../interface/interface';
 import { useServiceBusinessStore } from "../store/business/useServiceBusiness";
 import useAuthStore from '../globalState/globalState';
+import { useSocket } from '../context/SocketContext';
+import servicioLogger from '../utils/servicioLogger';
 
 const useSendLocation = () => {
 
@@ -13,27 +15,42 @@ const useSendLocation = () => {
     const { getLocation } = useLocationStore();
     const { postSendLocation } = useServiceBusinessStore();
     const { user } = useAuthStore();
+    const { conectado } = useSocket();
 
    useEffect(() => {
         if (!user) return;
 
         const sendLocation = async () => {
             try {
+                // Solo enviar si el socket está conectado
+                if (!conectado) {
+                    servicioLogger.debug('Socket no conectado, omitiendo envío de ubicación');
+                    return;
+                }
+
                 const location = await getLocation();
                 if (!location) return;
 
                 const lastLocation = lastLocationRef.current;
-                if (lastLocation && haversine(lastLocation, location) < 10) return;
+                const distance = lastLocation ? haversine(lastLocation, location) : Infinity;
+                
+                // Solo enviar si se movió más de 10 metros
+                if (lastLocation && distance < 10) {
+                    servicioLogger.debug('Ubicación no ha cambiado significativamente', { distance });
+                    return;
+                }
 
                 lastLocationRef.current = location;
-                postSendLocation(location.latitude, location.longitude);
+                await postSendLocation(location.latitude, location.longitude);
+                servicioLogger.debug('Ubicación enviada', { location, distance });
             } catch (err) {
-                console.error("Error enviando ubicación:", err);
+                servicioLogger.error('Error enviando ubicación', err);
             }
         };
 
         sendLocation();
-        intervalRef.current = setInterval(sendLocation, 25000);
+        // Actualizar ubicación cada 7 segundos (optimización de 25s a 7s)
+        intervalRef.current = setInterval(sendLocation, 7000);
 
         return () => {
             if (intervalRef.current) {
@@ -41,7 +58,7 @@ const useSendLocation = () => {
                 intervalRef.current = null;
             }
         };
-    }, [user]);
+    }, [user, conectado, getLocation, postSendLocation]);
 };
 
 export default useSendLocation;

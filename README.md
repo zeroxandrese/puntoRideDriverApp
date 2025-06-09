@@ -1,79 +1,200 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# PuntoRide Driver App 🚗
 
-# Getting Started
+Aplicación móvil para conductores de la plataforma PuntoRide, desarrollada con React Native.
 
->**Note**: Make sure you have completed the [React Native - Environment Setup](https://reactnative.dev/docs/environment-setup) instructions till "Creating a new application" step, before proceeding.
+## 📱 Descripción
 
-## Step 1: Start the Metro Server
+PuntoRide Driver es la aplicación oficial para conductores que permite:
+- Recibir y gestionar solicitudes de viaje en tiempo real
+- Navegación integrada hasta el punto de recogida y destino
+- Seguimiento de ganancias e historial de viajes
+- Comunicación en tiempo real con pasajeros
+- Gestión de estado del vehículo (carro/moto)
 
-First, you will need to start **Metro**, the JavaScript _bundler_ that ships _with_ React Native.
+## 🚀 Características Principales
 
-To start Metro, run the following command from the _root_ of your React Native project:
+- **Autenticación Segura**: Login con email y contraseña usando almacenamiento seguro (Keychain)
+- **Tracking en Tiempo Real**: Actualización de ubicación cada 7 segundos
+- **Conexión WebSocket Estable**: Sistema robusto de reconexión automática
+- **Gestión Offline**: Cola de mensajes para enviar cuando se recupere la conexión
+- **Notificaciones Push**: Alertas de nuevos viajes disponibles
+- **Modo Carga**: Opción para transportar paquetes
 
+## 🛠️ Tecnologías
+
+- **React Native** 0.76.5
+- **TypeScript** para type safety
+- **Zustand** para gestión de estado
+- **Socket.io** para comunicación en tiempo real
+- **React Native Maps** para mapas y navegación
+- **React Native Keychain** para almacenamiento seguro
+- **React Navigation** para navegación entre pantallas
+
+## 📋 Requisitos Previos
+
+- Node.js >= 18
+- npm o yarn
+- React Native CLI
+- Android Studio (para Android)
+- Xcode (para iOS)
+- Cocoapods (para iOS)
+
+## 🔧 Instalación
+
+1. Clonar el repositorio:
 ```bash
-# using npm
-npm start
-
-# OR using Yarn
-yarn start
+git clone https://github.com/tu-repo/puntoRideDriverApp.git
+cd puntoRideDriverApp
 ```
 
-## Step 2: Start your Application
-
-Let Metro Bundler run in its _own_ terminal. Open a _new_ terminal from the _root_ of your React Native project. Run the following command to start your _Android_ or _iOS_ app:
-
-### For Android
-
+2. Instalar dependencias:
 ```bash
-# using npm
-npm run android
+npm install
+# o
+yarn install
+```
 
-# OR using Yarn
+3. Configurar variables de entorno:
+```bash
+cp .env.example .env
+```
+
+Editar `.env` con las siguientes variables:
+```
+API_URL=https://api.puntoride.com
+API_URL_SOCKET=wss://socket.puntoride.com
+```
+
+4. Instalar pods (solo iOS):
+```bash
+cd ios && pod install
+```
+
+## 🏃‍♂️ Ejecución
+
+### Android
+```bash
+npm run android
+# o
 yarn android
 ```
 
-### For iOS
-
+### iOS
 ```bash
-# using npm
 npm run ios
-
-# OR using Yarn
+# o
 yarn ios
 ```
 
-If everything is set up _correctly_, you should see your new app running in your _Android Emulator_ or _iOS Simulator_ shortly provided you have set up your emulator/simulator correctly.
+### Metro Bundler
+```bash
+npm start
+# o
+yarn start
+```
 
-This is one way to run your app — you can also run it directly from within Android Studio and Xcode respectively.
+## 📱 Estructura del Proyecto
 
-## Step 3: Modifying your App
+```
+puntoRideDriverApp/
+├── src/
+│   ├── actions/          # Acciones de ubicación y permisos
+│   ├── apiConfig/        # Configuración de API y interceptores
+│   ├── assets/           # Imágenes y SVGs
+│   ├── components/       # Componentes reutilizables
+│   ├── context/          # Contextos de React (Socket)
+│   ├── globalState/      # Estado global con Zustand
+│   ├── hooks/            # Custom hooks
+│   ├── interface/        # Interfaces TypeScript
+│   ├── screen/           # Pantallas de la aplicación
+│   ├── stacks/           # Navegación
+│   ├── store/            # Stores de Zustand
+│   ├── theme/            # Estilos globales
+│   └── utils/            # Utilidades y servicios
+├── android/              # Código nativo Android
+├── ios/                  # Código nativo iOS
+└── App.tsx              # Componente principal
+```
 
-Now that you have successfully run the app, let's modify it.
+## 🔐 Seguridad
 
-1. Open `App.tsx` in your text editor of choice and edit some lines.
-2. For **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Developer Menu** (<kbd>Ctrl</kbd> + <kbd>M</kbd> (on Window and Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (on macOS)) to see your changes!
+- Tokens almacenados en Keychain (iOS) / Keystore (Android)
+- Autenticación en todas las conexiones WebSocket
+- Renovación automática de tokens
+- Logs seguros sin información sensible
 
-   For **iOS**: Hit <kbd>Cmd ⌘</kbd> + <kbd>R</kbd> in your iOS Simulator to reload the app and see your changes!
+## 🐛 Debugging
 
-## Congratulations! :tada:
+### Logs
+La aplicación incluye un sistema de logging completo:
+```typescript
+import servicioLogger from './utils/servicioLogger';
 
-You've successfully run and modified your React Native App. :partying_face:
+// Diferentes niveles de log
+servicioLogger.debug('Mensaje debug');
+servicioLogger.info('Información');
+servicioLogger.warn('Advertencia');
+servicioLogger.error('Error', error);
+```
 
-### Now what?
+### Estado de Conexión
+Indicador visual del estado de la conexión WebSocket en la parte superior de la pantalla.
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [Introduction to React Native](https://reactnative.dev/docs/getting-started).
+### React Native Debugger
+```bash
+# Instalar
+brew install react-native-debugger
 
-# Troubleshooting
+# Ejecutar
+open "rndebugger://set-debugger-loc?host=localhost&port=8081"
+```
 
-If you can't get this to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+## 📦 Build para Producción
 
-# Learn More
+### Android
+```bash
+cd android
+./gradlew assembleRelease
+```
 
-To learn more about React Native, take a look at the following resources:
+El APK se generará en `android/app/build/outputs/apk/release/`
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+### iOS
+1. Abrir el proyecto en Xcode
+2. Seleccionar "Generic iOS Device"
+3. Product → Archive
+
+## 🧪 Testing
+
+```bash
+# Ejecutar tests
+npm test
+
+# Con coverage
+npm test -- --coverage
+```
+
+## 📈 Monitoreo
+
+La aplicación está preparada para integrarse con servicios de monitoreo como:
+- Sentry para reporte de errores
+- Firebase Analytics para métricas
+- Crashlytics para crashes
+
+## 🤝 Contribuir
+
+1. Fork el proyecto
+2. Crear una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abrir un Pull Request
+
+## 📞 Soporte
+
+Para soporte técnico, contactar:
+- Email: soporte@puntoride.com
+- Teléfono: +XX XXX XXX XXXX
+
+## 📄 Licencia
+
+Este proyecto es privado y propiedad de PuntoRide. Todos los derechos reservados.

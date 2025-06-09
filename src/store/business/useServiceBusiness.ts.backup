@@ -9,6 +9,7 @@ import {
 } from '../../interface/interface';
 import apiConfig from "../../apiConfig/apiConfig";
 import { ErrorAPI, obtenerMensajeError, EventoTripAsignado } from '../../interface/errores';
+import { socket } from '../../utils/socketioClient';
 
 type TravelState = 'idle' | 'sending' | 'in_progress';
 
@@ -43,6 +44,7 @@ interface BusinessState {
     getTripAvailable: () => Promise<void>;
     getVehicle: () => Promise<void>;
     postSurvey: (id: string, feeback: string, score: number) => Promise<void>;
+    initSocketListeners: () => void;
     set: (state: Partial<BusinessState>) => void;
 };
 
@@ -79,9 +81,119 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
     message: "",
     set: (state) => set(state),
 
-    // Socket listeners ahora manejados por useSocketEvents hook
+    initSocketListeners: () => {
+        socket.on("trip_assigned", ({ trip, vehicle, client }: any) => {
+
+            set({
+                tripCurrent: trip,
+                tripCurrentVehicle: vehicle,
+                tripCurrentClient: client,
+            });
+
+            showToast({
+                type: "success",
+                title: "Viaje aceptado",
+                message: "Ya avisamos al cliente",
+                visibilityTime: 6000
+            });
+        });
+
+        socket.on("trip_driverArrived", ({ trip }: { trip: trip }) => {
+            set({
+                tripCurrent: trip
+            });
+
+            showToast({
+                type: "success",
+                title: "Ya llegaste",
+                message: "El cliente te espera.",
+                visibilityTime: 6000
+            });
+        });
+
+        socket.on("new-comment", (comment) => {
+
+            const prevComments = get().comments ?? [];
+            set({ comments: [...prevComments, comment] });
+
+        });
+
+        socket.on("client_route_accepted", ({ polyline, polylineType, positionDriverEvent }) => {
+
+            set({ polyline, polylineType, positionDriverEvent });
+        });
+
+        socket.on("trip_started", ({ polyline, polylineType }) => {
+
+            set({ polyline, polylineType, tripStarted: true, travelState: "in_progress" });
+        });
+
+        socket.on("client_driver_update", ({ position }) => {
+
+            set({
+                positionDriverEvent: position
+            });
+        });
+
+        socket.on("trip_canceled", ({ tripId }) => {
+
+            set({
+                tripCurrentVehicle: null,
+                polyline: null,
+                endTrip: true,
+                tripCurrent: null,
+                polylineType: "",
+                tripCurrentClient: null,
+                tripStarted: false,
+                travelState: "idle",
+                comments: []
+            });
+
+            showToast({
+                type: "error",
+                title: "Viaje cancelado",
+                message: "El cliente canceló el viaje.",
+                visibilityTime: 5000
+            });
+        });
+
+        socket.on("new_trip_request", (data) => {
+            const newTrip = {
+                uid: data.tripId,
+                addressStart: data.origin.address,
+                addressEnd: data.destination.address,
+                latitudeStart: data.origin.lat,
+                longitudeStart: data.origin.lng,
+                latitudeEnd: data.destination.lat,
+                longitudeEnd: data.destination.lng,
+                price: data.price,
+                estimatedArrival: data.estimatedArrival,
+            };
+
+            set((state): any => {
+                const alreadyExists = state.tripsAvailable?.some(
+                    (trip) => trip.uid === newTrip.uid
+                );
+
+                if (alreadyExists) return state;
+
+                return {
+                    tripsAvailable: [...(state.tripsAvailable || []), newTrip],
+                };
+            });
+        });
+
+    },
+
     removeSocketListeners: () => {
-        // Deprecado: ahora se maneja en useSocketEvents
+        socket.off("trip_assigned");
+        socket.off("trip_canceled");
+        socket.off("trip_driverArrived");
+        socket.off("new-comment");
+        socket.off("client_route_accepted");
+        socket.off("trip_started");
+        socket.off("trip_end");
+        socket.off("client_driver_update");
     },
 
     tripRejected: async (
@@ -92,9 +204,9 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
 
             await apiConfig.post(`/tripCalculate/${id}`);
 
-        } catch (error) {
+        } catch (error: any) {
             set({
-                errorMessage: (error as ErrorAPI).response?.data?.msg || "Error al calcular el viaje"
+                errorMessage: error.response?.data?.msg || "Error al calcular el viaje"
             });
         }
     },
@@ -117,8 +229,8 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
                 return;
             };
 
-        } catch (error) {
-            set({ errorMessage: (error as ErrorAPI).response?.data?.msg || "Error al comentar" });
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
         }
     },
 
@@ -131,8 +243,8 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
                 tripsHistory: data
             });
 
-        } catch (error) {
-            set({ errorMessage: (error as ErrorAPI).response?.data?.msg || "Error al comentar" });
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
         }
     },
 
@@ -141,8 +253,8 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
         try {
             await apiConfig.post<SurveyResponse>(`/surveys/driversSurveys/${id}`, { feedback, score });
 
-        } catch (error) {
-            set({ errorMessage: (error as ErrorAPI).response?.data?.msg || "Error al comentar" });
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
         }
     },
 
@@ -173,8 +285,8 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
                 travelState: "idle"
             });
 
-        } catch (error) {
-            set({ errorMessage: (error as ErrorAPI).response?.data?.msg || "Error al comentar" });
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
         }
     },
 
@@ -207,8 +319,8 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
             });
 
 
-        } catch (error) {
-            set({ errorMessage: (error as ErrorAPI).response?.data?.msg || "Error al comentar" });
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
         }
     },
     postCommentsTrip: async (comment: string, id: string) => {
@@ -217,8 +329,8 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
             console.log("paso desde el mensaje")
             await apiConfig.post<Comments[]>(`/commentDriver/${id}`, { comment });
 
-        } catch (error) {
-            set({ errorMessage: (error as ErrorAPI).response?.data?.msg || "Error al comentar" });
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
         }
     },
 
@@ -231,8 +343,8 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
                 comments: data
             });
 
-        } catch (error) {
-            set({ errorMessage: (error as ErrorAPI).response?.data?.msg || "Error al comentar" });
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
         }
     },
 
@@ -246,8 +358,8 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
                 tripsAvailable: data.trips
             });
 
-        } catch (error) {
-            set({ errorMessage: (error as ErrorAPI).response?.data?.msg || "Error al comentar" });
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
         }
     },
 
@@ -265,15 +377,8 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
                 tripCurrent: data.trip
             })
 
-            showToast({
-                type: "success",
-                title: "Viaje aceptado",
-                message: "Ya avisamos al cliente",
-                visibilityTime: 6000
-            });
-
-        } catch (error) {
-            set({ errorMessage: (error as ErrorAPI).response?.data?.msg || "Error al comentar" });
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
         }
     },
 
@@ -290,15 +395,8 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
                 tripCurrent: data.trip
             })
 
-            showToast({
-                type: "success",
-                title: "Ya llegaste",
-                message: "El cliente te espera.",
-                visibilityTime: 6000
-            });
-
-        } catch (error) {
-            set({ errorMessage: (error as ErrorAPI).response?.data?.msg || "Error al comentar" });
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
         }
     },
 
@@ -306,17 +404,12 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
 
         try {
 
-            interface TripStartedResponse {
-                polyline: { latitude: number; longitude: number }[];
-                polylineType: string;
-                trip: trip;
-            }
-            const { data } = await apiConfig.post<TripStartedResponse>(`/trip/tripStarted/${id}`);
+            const { data } = await apiConfig.post<any>(`/trip/tripStarted/${id}`);
 
             set({ polyline: data.polyline, polylineType: data.polylineType, tripCurrent: data.trip, tripStarted: true, travelState: "in_progress" });
 
-        } catch (error) {
-            set({ errorMessage: (error as ErrorAPI).response?.data?.msg || "Error al comentar" });
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
         }
     },
 
@@ -345,8 +438,8 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
                 visibilityTime: 5000
             });
 
-        } catch (error) {
-            set({ errorMessage: (error as ErrorAPI).response?.data?.msg || "Error al comentar" });
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
         }
     },
 
@@ -355,14 +448,14 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
 
         try {
 
-            const { data } = await apiConfig.get<vehicle>(`/vehicles/`);
+            const { data } = await apiConfig.post<vehicle>(`/vehicles/`);
 
             set({
                 tripCurrentVehicle: data
             })
 
-        } catch (error) {
-            set({ errorMessage: (error as ErrorAPI).response?.data?.msg || "Error al comentar" });
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
         }
     },
 
@@ -375,8 +468,8 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
                 longitude
             });
 
-        } catch (error) {
-            set({ errorMessage: (error as ErrorAPI).response?.data?.msg || "Error al comentar" });
+        } catch (error: any) {
+            set({ errorMessage: error.response?.data?.msg || "Error al comentar" });
         }
     }
 

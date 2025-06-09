@@ -57,7 +57,7 @@ const useAuthStore = create<AuthState>((set, get) => ({
       await almacenamientoSeguro.guardarCredenciales({ 
         token: data.token, 
         email, 
-        userId: data.user._id 
+        userId: data.user.uid 
       });
       set({ token: data.token, user: data.user, status: "authenticated" });
     } catch (error) {
@@ -80,7 +80,7 @@ const useAuthStore = create<AuthState>((set, get) => ({
       await almacenamientoSeguro.guardarCredenciales({ 
         token: data.token, 
         email, 
-        userId: data.user._id 
+        userId: data.user.uid 
       });
       set({
         user: data.user,

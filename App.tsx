@@ -1,6 +1,6 @@
 import './gesture-handler';
 import { useEffect } from 'react';
-import { AppState, BackHandler } from 'react-native';
+import { AppState, BackHandler, LogBox } from 'react-native';
 import Toast from 'react-native-toast-message';
 //import * as Sentry from "@sentry/react-native";
 //import { SENTRY_DSN } from "@env";
@@ -11,7 +11,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { StackNavigationRoot } from './src/stacks/StackNavigationRoot';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 // Socket management now handled by SocketProvider
-import { ErrorBoundary } from './src/components/ErrorBoundary';
+import { AppErrorBoundary } from './src/components/ErrorBoundary';
 import servicioLogger from './src/utils/servicioLogger';
 import { SocketProvider } from './src/context/SocketContext';
 
@@ -24,6 +24,7 @@ import { SocketProvider } from './src/context/SocketContext';
   },
 }); */
 
+LogBox.ignoreAllLogs(true);
 
 export const App = () => {
 
@@ -36,7 +37,7 @@ export const App = () => {
   // App state changes now handled by gestorSocket
 
   return (
-    <ErrorBoundary>
+    <AppErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <PaperProvider
           settings={{
@@ -61,7 +62,7 @@ export const App = () => {
         </PaperProvider>
       </GestureHandlerRootView>
       <Toast />
-    </ErrorBoundary>
+    </AppErrorBoundary>
   )
 }
 

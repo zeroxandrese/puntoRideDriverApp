@@ -190,10 +190,9 @@ export interface tripsAcceptedResponse {
 
 export interface CurrentTripScreenProps {
   trip: trip;
-  tripCurrentVehicle: vehicle;
-  tripCurrentClient: Users;
-  user: Driver;
-  comments: Comments[];
-  tripStarted: boolean;
+  tripCurrentVehicle: vehicle | null;
+  tripCurrentClient: Users | null;
+  user: Driver | null;
+  comments: Comments[] | null;
+  tripStarted: boolean | null;
 }
-

@@ -265,6 +265,13 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
                 tripCurrent: data.trip
             })
 
+            showToast({
+                type: "success",
+                title: "Viaje aceptado",
+                message: "Ya avisamos al cliente",
+                visibilityTime: 6000
+            });
+
         } catch (error) {
             set({ errorMessage: (error as ErrorAPI).response?.data?.msg || "Error al comentar" });
         }
@@ -282,6 +289,13 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
             set({
                 tripCurrent: data.trip
             })
+
+            showToast({
+                type: "success",
+                title: "Ya llegaste",
+                message: "El cliente te espera.",
+                visibilityTime: 6000
+            });
 
         } catch (error) {
             set({ errorMessage: (error as ErrorAPI).response?.data?.msg || "Error al comentar" });
@@ -341,7 +355,7 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
 
         try {
 
-            const { data } = await apiConfig.post<vehicle>(`/vehicles/`);
+            const { data } = await apiConfig.get<vehicle>(`/vehicles/`);
 
             set({
                 tripCurrentVehicle: data

@@ -25,6 +25,8 @@ import useSendLocation from '../components/useSendLocation';
 
 type NavigationProps = StackNavigationProp<RootStackParamList, "HomeScreen">;
 
+type ModalName = 'modal1' | 'modal2';
+
 export const HomeScreen = () => {
   useSendLocation();
   const navigation = useNavigation<NavigationProps>();
@@ -36,9 +38,9 @@ export const HomeScreen = () => {
   const [btnDisable, setBtnDisable] = useState(false)
   const bottomSheetRef = useRef<BottomSheet>(null);
   const { tripCurrent, tripCurrentVehicle,
-    tripCurrentClient, initSocketListeners, comments,
+    tripCurrentClient, comments,
     polyline, tripStarted, travelState, set, postCancelTrip,
-    removeSocketListeners, getActiveTrip, postAcceptedTrip, getVehicle, endTrip } = useServiceBusinessStore();
+     getActiveTrip, postAcceptedTrip, getVehicle, endTrip } = useServiceBusinessStore();
   const { conectado, estadoConexion, emitir } = useSocket();
   const { confirmarViaje } = useSocketTrip();
   
@@ -50,12 +52,12 @@ export const HomeScreen = () => {
     destination: { latitude: 0, longitude: 0 }
   });
 
-  const [modalVisible, setModalVisible] = useState({
+  const [modalVisible, setModalVisible] = useState<Record<ModalName, boolean>>({
     modal1: false,
     modal2: false
   });
 
-  const toggleModal = (modalName: string) => {
+  const toggleModal = (modalName: ModalName) => {
     setModalVisible((prev) => ({
       ...prev,
       [modalName]: !prev[modalName],
@@ -73,56 +75,6 @@ export const HomeScreen = () => {
       confirmarViaje(tripCurrent.uid);
     }
   }, [tripCurrent?.uid, conectado, confirmarViaje]);
-
-  useEffect(() => {
-    // Socket connection is now managed by SocketProvider
-    const initializeData = async () => {
-      // Conectar socket con autenticación
-      const connected = await conectarSocketConAuth();
-      
-      if (!connected) {
-        console.log("❌ No se pudo conectar el socket (sin autenticación)");
-        return;
-      }
-    };
-
-    const handleConnect = () => {
-      console.log("✅ Socket conectado (handleConnect)");
-
-      if (user?.uid) {
-        console.log("📨 Registrando usuario:", user.uid);
-        socket.emit("register-user", user.uid);
-        socket.emit("join", user.uid);
-      }
-
-      // Socket listeners now managed by useSocketEvents hook // si tienes listeners personalizados
-    };
-
-    const handleDisconnect = () => {
-      console.log("🔌 Socket desconectado");
-    };
-
-    const handleError = (err: Error) => {
-      console.log("❌ Error en socket:", err.message);
-    };
-
-    // Inicializar conexión autenticada
-    if (user?.uid) {
-      initializeSocket();
-    }
-
-    socket.on("connect", handleConnect);
-    socket.on("disconnect", handleDisconnect);
-    socket.on("connect_error", handleError);
-
-    return () => {
-      socket.off("connect", handleConnect);
-      socket.off("disconnect", handleDisconnect);
-      socket.off("connect_error", handleError);
-      // Cleanup now handled by useSocketEvents hook
-      desconectarSocket();
-    };
-  }, [user?.uid]);
 
   useEffect(() => {
     if (tripDetail) {

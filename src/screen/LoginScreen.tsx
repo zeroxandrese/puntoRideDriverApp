@@ -13,6 +13,8 @@ import { ActivityIndicator, FAB, TextInput } from 'react-native-paper';
 
 type NavigationProps = StackNavigationProp<RootStackParamListInitial, "Home">;
 
+type ModalName = 'modal1';
+
 export const LoginScreen = () => {
 
   const { signIn } = useAuthStore();
@@ -25,11 +27,11 @@ export const LoginScreen = () => {
     code: ""
   });
 
-  const [modalVisible, setModalVisible] = useState({
+  const [modalVisible, setModalVisible] = useState<Record<ModalName, boolean>>({
     modal1: false
   });
 
-  const toggleModal = (modalName: string) => {
+  const toggleModal = (modalName: ModalName) => {
     setModalVisible((prev) => ({
       ...prev,
       [modalName]: !prev[modalName],

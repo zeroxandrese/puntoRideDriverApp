@@ -113,43 +113,13 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
 // Hook personalizado para eventos de viaje
 export const useSocketTrip = () => {
-  const { suscribir, emitir } = useSocket();
-  const [tripAsignado, setTripAsignado] = useState<any>(null);
-
-  useEffect(() => {
-    const cleanups: (() => void)[] = [];
-
-    // Suscribir a eventos de viaje
-    cleanups.push(
-      suscribir('trip_assigned', (data: any) => {
-        servicioLogger.info('Viaje asignado recibido', data);
-        setTripAsignado(data);
-      })
-    );
-
-    cleanups.push(
-      suscribir('trip_canceled', () => {
-        servicioLogger.info('Viaje cancelado');
-        setTripAsignado(null);
-      })
-    );
-
-    return () => {
-      cleanups.forEach(cleanup => cleanup());
-    };
-  }, [suscribir]);
+  const {emitir } = useSocket();
 
   const confirmarViaje = useCallback(async (tripId: string) => {
     return await emitir('confirm-trip', { tripId });
   }, [emitir]);
 
-  const rechazarViaje = useCallback(async (tripId: string) => {
-    return await emitir('reject-trip', { tripId });
-  }, [emitir]);
-
   return {
-    tripAsignado,
-    confirmarViaje,
-    rechazarViaje
+    confirmarViaje
   };
 };

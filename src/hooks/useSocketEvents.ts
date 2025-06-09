@@ -31,44 +31,6 @@ export const useSocketEvents = () => {
     cleanupRefs.current.forEach(cleanup => cleanup());
     cleanupRefs.current = [];
 
-    // Trip assigned
-    cleanupRefs.current.push(
-      suscribir('trip_assigned', ({ trip, vehicle, client }: EventoTripAsignado) => {
-        servicioLogger.info('Evento: trip_assigned', { trip, vehicle, client });
-        
-        useServiceBusinessStore.setState({
-          tripCurrent: trip,
-          tripCurrentVehicle: vehicle,
-          tripCurrentClient: client,
-        });
-
-        showToast({
-          type: "success",
-          title: "Viaje aceptado",
-          message: "Ya avisamos al cliente",
-          visibilityTime: 6000
-        });
-      })
-    );
-
-    // Driver arrived
-    cleanupRefs.current.push(
-      suscribir('trip_driverArrived', ({ trip }: { trip: trip }) => {
-        servicioLogger.info('Evento: trip_driverArrived', { trip });
-        
-        useServiceBusinessStore.setState({
-          tripCurrent: trip
-        });
-
-        showToast({
-          type: "success",
-          title: "Ya llegaste",
-          message: "El cliente te espera.",
-          visibilityTime: 6000
-        });
-      })
-    );
-
     // New comment
     cleanupRefs.current.push(
       suscribir('new-comment', (comment: any) => {
@@ -92,31 +54,6 @@ export const useSocketEvents = () => {
           polyline, 
           polylineType, 
           positionDriverEvent 
-        });
-      })
-    );
-
-    // Trip started
-    cleanupRefs.current.push(
-      suscribir('trip_started', ({ polyline, polylineType }: any) => {
-        servicioLogger.info('Evento: trip_started');
-        
-        useServiceBusinessStore.setState({ 
-          polyline, 
-          polylineType, 
-          tripStarted: true, 
-          travelState: "in_progress" 
-        });
-      })
-    );
-
-    // Driver position update
-    cleanupRefs.current.push(
-      suscribir('client_driver_update', ({ position }: any) => {
-        servicioLogger.debug('Evento: client_driver_update', { position });
-        
-        useServiceBusinessStore.setState({
-          positionDriverEvent: position
         });
       })
     );

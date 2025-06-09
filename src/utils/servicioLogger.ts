@@ -17,142 +17,108 @@ interface LogEntry {
   };
 }
 
-class ServicioLogger {
-  private logs: LogEntry[] = [];
-  private readonly MAX_LOGS = 100;
-  private isDevelopment = __DEV__;
+const MAX_LOGS = 100;
+const isDevelopment = __DEV__;
+let logs: LogEntry[] = [];
 
-  private async getDeviceInfo() {
-    try {
-      return {
-        platform: Platform.OS,
-        version: Platform.Version.toString(),
-        model: await DeviceInfo.getModel(),
-        appVersion: DeviceInfo.getVersion()
-      };
-    } catch {
-      return {
-        platform: Platform.OS,
-        version: Platform.Version.toString(),
-        model: 'Unknown',
-        appVersion: 'Unknown'
-      };
-    }
-  }
-
-  private createLogEntry(
-    level: LogLevel,
-    message: string,
-    context?: any,
-    error?: Error
-  ): LogEntry {
+const getDeviceInfo = async () => {
+  try {
     return {
-      timestamp: new Date().toISOString(),
-      level,
-      message,
-      context,
-      stackTrace: error?.stack
+      platform: Platform.OS,
+      version: Platform.Version.toString(),
+      model: await DeviceInfo.getModel(),
+      appVersion: DeviceInfo.getVersion(),
+    };
+  } catch {
+    return {
+      platform: Platform.OS,
+      version: Platform.Version.toString(),
+      model: 'Unknown',
+      appVersion: 'Unknown',
     };
   }
+};
 
-  private log(entry: LogEntry) {
-    // Almacenar en memoria
-    this.logs.push(entry);
-    if (this.logs.length > this.MAX_LOGS) {
-      this.logs.shift();
-    }
+const createLogEntry = (
+  level: LogLevel,
+  message: string,
+  context?: any,
+  error?: Error
+): LogEntry => ({
+  timestamp: new Date().toISOString(),
+  level,
+  message,
+  context,
+  stackTrace: error?.stack,
+});
 
-    // Mostrar en consola en desarrollo
-    if (this.isDevelopment) {
-      const logMethod = entry.level === 'error' || entry.level === 'fatal' 
-        ? console.error 
-        : entry.level === 'warn' 
-        ? console.warn 
+const sendToRemoteService = async (entry: LogEntry) => {
+  try {
+    const deviceInfo = await getDeviceInfo();
+    const enrichedEntry = { ...entry, deviceInfo };
+    // TODO: Implementar envío a servicio remoto (e.g., Sentry, Crashlytics)
+    // await apiConfig.post('/logs', enrichedEntry);
+  } catch {
+    // Fallar silenciosamente
+  }
+};
+
+const log = (entry: LogEntry) => {
+  logs.push(entry);
+  if (logs.length > MAX_LOGS) logs.shift();
+
+  if (isDevelopment) {
+    const logMethod =
+      entry.level === 'error' || entry.level === 'fatal'
+        ? console.error
+        : entry.level === 'warn'
+        ? console.warn
         : console.log;
 
-      logMethod(
-        `[${entry.timestamp}] [${entry.level.toUpperCase()}] ${entry.message}`,
-        entry.context || '',
-        entry.stackTrace || ''
-      );
-    }
-
-    // En producción, enviar errores críticos a servicio externo
-    if (!this.isDevelopment && (entry.level === 'error' || entry.level === 'fatal')) {
-      this.sendToRemoteService(entry);
-    }
+    logMethod(
+      `[${entry.timestamp}] [${entry.level.toUpperCase()}] ${entry.message}`,
+      entry.context || '',
+      entry.stackTrace || ''
+    );
   }
 
-  private async sendToRemoteService(entry: LogEntry) {
-    try {
-      // Aquí se podría integrar con servicios como Sentry, Crashlytics, etc.
-      // Por ahora solo preparamos la estructura
-      const deviceInfo = await this.getDeviceInfo();
-      const enrichedEntry = { ...entry, deviceInfo };
-      
-      // TODO: Implementar envío a servicio remoto
-      // await apiConfig.post('/logs', enrichedEntry);
-    } catch {
-      // Fallar silenciosamente para no causar más errores
-    }
+  if (!isDevelopment && (entry.level === 'error' || entry.level === 'fatal')) {
+    sendToRemoteService(entry);
   }
+};
 
-  debug(message: string, context?: any) {
-    this.log(this.createLogEntry('debug', message, context));
-  }
-
-  info(message: string, context?: any) {
-    this.log(this.createLogEntry('info', message, context));
-  }
-
-  warn(message: string, context?: any) {
-    this.log(this.createLogEntry('warn', message, context));
-  }
-
-  error(message: string, error?: Error | any, context?: any) {
-    const errorObj = error instanceof Error ? error : new Error(String(error));
-    this.log(this.createLogEntry('error', message, context, errorObj));
-  }
-
-  fatal(message: string, error?: Error | any, context?: any) {
-    const errorObj = error instanceof Error ? error : new Error(String(error));
-    this.log(this.createLogEntry('fatal', message, context, errorObj));
-  }
-
-  // Obtener logs para debugging
-  getLogs(level?: LogLevel): LogEntry[] {
-    if (level) {
-      return this.logs.filter(log => log.level === level);
-    }
-    return [...this.logs];
-  }
-
-  // Limpiar logs
-  clearLogs() {
-    this.logs = [];
-  }
-
-  // Método helper para errores de API
-  logApiError(endpoint: string, error: any, context?: any) {
+export const servicioLogger = {
+  debug: (message: string, context?: any) => log(createLogEntry('debug', message, context)),
+  info: (message: string, context?: any) => log(createLogEntry('info', message, context)),
+  warn: (message: string, context?: any) => log(createLogEntry('warn', message, context)),
+  error: (message: string, error?: Error | any, context?: any) => {
+    const err = error instanceof Error ? error : new Error(String(error));
+    log(createLogEntry('error', message, context, err));
+  },
+  fatal: (message: string, error?: Error | any, context?: any) => {
+    const err = error instanceof Error ? error : new Error(String(error));
+    log(createLogEntry('fatal', message, context, err));
+  },
+  getLogs: (level?: LogLevel): LogEntry[] =>
+    level ? logs.filter((log) => log.level === level) : [...logs],
+  clearLogs: () => {
+    logs = [];
+  },
+  logApiError: (endpoint: string, error: any, context?: any) => {
     const message = `Error en API: ${endpoint}`;
     const errorContext = {
       endpoint,
       ...context,
       response: error.response?.data,
-      status: error.response?.status
+      status: error.response?.status,
     };
-    this.error(message, error, errorContext);
-  }
-
-  // Método helper para errores de Socket
-  logSocketError(event: string, error: any, context?: any) {
+    servicioLogger.error(message, error, errorContext);
+  },
+  logSocketError: (event: string, error: any, context?: any) => {
     const message = `Error en Socket: ${event}`;
-    const errorContext = {
-      event,
-      ...context
-    };
-    this.error(message, error, errorContext);
-  }
-}
+    const errorContext = { event, ...context };
+    servicioLogger.error(message, error, errorContext);
+  },
+};
 
-export default new ServicioLogger();
+export default servicioLogger;

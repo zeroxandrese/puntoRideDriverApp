@@ -1,112 +1,57 @@
-import React, { Component, ReactNode } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { ReactNode } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
+import RawErrorBoundary from 'react-native-error-boundary';
 import servicioLogger from '../utils/servicioLogger';
 
-interface Props {
-  children: ReactNode;
-  fallback?: ReactNode;
-}
+const ErrorBoundary = RawErrorBoundary as any; // 💡 Esto soluciona el problema de tipos
 
-interface State {
-  hasError: boolean;
-  error: Error | null;
-  errorInfo: any;
-  retrying: boolean;
-}
+const ErrorFallback = ({ error, resetError }: { error: Error; resetError: () => void }) => {
+  const [retrying, setRetrying] = React.useState(false);
 
-export class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = {
-      hasError: false,
-      error: null,
-      errorInfo: null,
-      retrying: false
-    };
-  }
-
-  static getDerivedStateFromError(error: Error): State {
-    return {
-      hasError: true,
-      error,
-      errorInfo: null,
-      retrying: false
-    };
-  }
-
-  componentDidCatch(error: Error, errorInfo: any) {
-    // Registrar el error
-    servicioLogger.fatal('Error capturado por ErrorBoundary', error, {
-      componentStack: errorInfo.componentStack,
-      props: this.props
-    });
-
-    this.setState({
-      errorInfo
-    });
-  }
-
-  handleReset = async () => {
-    this.setState({ retrying: true });
-    
-    // Pequeño retraso para mostrar el indicador de carga
+  const handleRetry = () => {
+    setRetrying(true);
     setTimeout(() => {
-      this.setState({
-        hasError: false,
-        error: null,
-        errorInfo: null,
-        retrying: false
-      });
+      setRetrying(false);
+      resetError();
     }, 1000);
   };
 
-  render() {
-    if (this.state.hasError) {
-      if (this.props.fallback) {
-        return <>{this.props.fallback}</>;
-      }
+  React.useEffect(() => {
+    servicioLogger.fatal('Error capturado por ErrorBoundary', error);
+  }, [error]);
 
-      return (
-        <View style={styles.container}>
-          <View style={styles.errorCard}>
-            <Text style={styles.title}>¡Ups! Algo salió mal</Text>
-            <Text style={styles.message}>
-              Ha ocurrido un error inesperado. Por favor, intenta de nuevo.
-            </Text>
-            
-            {__DEV__ && this.state.error && (
-              <ScrollView style={styles.errorDetails}>
-                <Text style={styles.errorText}>
-                  {this.state.error.toString()}
-                </Text>
-                {this.state.errorInfo && (
-                  <Text style={styles.stackTrace}>
-                    {this.state.errorInfo.componentStack}
-                  </Text>
-                )}
-              </ScrollView>
-            )}
+  return (
+    <View style={styles.container}>
+      <View style={styles.errorCard}>
+        <Text style={styles.title}>¡Ups! Algo salió mal</Text>
+        <Text style={styles.message}>
+          Ha ocurrido un error inesperado. Por favor, intenta de nuevo.
+        </Text>
 
-            <TouchableOpacity
-              style={styles.button}
-              onPress={this.handleReset}
-              disabled={this.state.retrying}
-            >
-              {this.state.retrying ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text style={styles.buttonText}>Reintentar</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      );
-    }
+        {__DEV__ && (
+          <ScrollView style={styles.errorDetails}>
+            <Text style={styles.errorText}>{error.toString()}</Text>
+          </ScrollView>
+        )}
 
-    return this.props.children;
-  }
-}
+        <TouchableOpacity style={styles.button} onPress={handleRetry} disabled={retrying}>
+          {retrying ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>Reintentar</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+export const AppErrorBoundary = ({ children }: { children: ReactNode }) => (
+  <ErrorBoundary FallbackComponent={ErrorFallback}>
+    {children}
+  </ErrorBoundary>
+);
 
 const styles = StyleSheet.create({
   container: {

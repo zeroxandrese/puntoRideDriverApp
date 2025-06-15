@@ -188,6 +188,8 @@ export interface tripsAcceptedResponse {
   success: boolean
 }
 
+type ModalName = 'modal1' | 'modal2' | 'modal3';
+
 export interface CurrentTripScreenProps {
   trip: trip;
   tripCurrentVehicle: vehicle | null;
@@ -195,4 +197,5 @@ export interface CurrentTripScreenProps {
   user: Driver | null;
   comments: Comments[] | null;
   tripStarted: boolean | null;
+  toggleModal: (modal: ModalName) => void;
 }

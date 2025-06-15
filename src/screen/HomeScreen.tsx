@@ -7,6 +7,8 @@ import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { useSocket, useSocketTrip } from '../context/SocketContext';
 import { useSocketEvents } from '../hooks/useSocketEvents';
 import Modal from 'react-native-modal';
+import { ActivityIndicator } from 'react-native-paper';
+import FontAwesome6 from '@react-native-vector-icons/fontawesome6';
 
 import { RootStackParamList, LatLng, trip } from '../interface/interface';
 import { ModalVisibilidad } from '../interface/errores';
@@ -18,14 +20,14 @@ import { useServiceBusinessStore } from "../store/business/useServiceBusiness";
 import IconMenu from "../assets/iconMenu.svg";
 import { CurrentTripScreen } from './CurrentTripScreen';
 import useAuthStore from '../globalState/globalState';
-import FontAwesome6 from '@react-native-vector-icons/fontawesome6';
 import { ServiceScreen } from '../screen/ServiceScreen';
 import { ServiceDetailScreen } from './ServiceDetailScreen';
 import useSendLocation from '../components/useSendLocation';
+import COBROIMG from '../assets/CobroImg.svg';
 
 type NavigationProps = StackNavigationProp<RootStackParamList, "HomeScreen">;
 
-type ModalName = 'modal1' | 'modal2';
+type ModalName = 'modal1' | 'modal2' | 'modal3';
 
 export const HomeScreen = () => {
   useSendLocation();
@@ -40,10 +42,12 @@ export const HomeScreen = () => {
   const { tripCurrent, tripCurrentVehicle,
     tripCurrentClient, comments,
     polyline, tripStarted, travelState, set, postCancelTrip,
-     getActiveTrip, postAcceptedTrip, getVehicle, endTrip } = useServiceBusinessStore();
+    getActiveTrip, postAcceptedTrip, getVehicle, endTrip, postTripEnd } = useServiceBusinessStore();
   const { conectado, estadoConexion, emitir } = useSocket();
   const { confirmarViaje } = useSocketTrip();
-  
+  const [loadingPay, setLoadingPay] = useState(false);
+  const [isLoadingCancel, setIsLoadingCancel] = useState(false);
+
   // Inicializar listeners de eventos socket
   useSocketEvents();
 
@@ -54,7 +58,8 @@ export const HomeScreen = () => {
 
   const [modalVisible, setModalVisible] = useState<Record<ModalName, boolean>>({
     modal1: false,
-    modal2: false
+    modal2: false,
+    modal3: false
   });
 
   const toggleModal = (modalName: ModalName) => {
@@ -65,7 +70,16 @@ export const HomeScreen = () => {
   };
 
   useEffect(() => {
-    getVehicle();
+    const checkActiveTrip = async () => {
+      try {
+        await getActiveTrip();
+        await getVehicle();
+      } catch (error) {
+        console.error("Error al obtener el viaje activo:", error);
+      }
+    };
+
+    checkActiveTrip();
   }, []);
 
   useEffect(() => {
@@ -109,6 +123,16 @@ export const HomeScreen = () => {
         <CarLoading />
       </View>
     );
+  };
+
+  const postEndTrip = async (uid: string) => {
+    setLoadingPay(true);
+    if (!uid) {
+      return;
+    }
+    await postTripEnd(uid)
+    toggleModal('modal3')
+    setLoadingPay(true);
   };
 
   return (
@@ -178,6 +202,7 @@ export const HomeScreen = () => {
                     user={user}
                     comments={comments}
                     tripStarted={tripStarted}
+                    toggleModal={toggleModal}
                   />
                 ) : tripDetail ? (
                   <ServiceDetailScreen
@@ -189,6 +214,16 @@ export const HomeScreen = () => {
                       await postAcceptedTrip(tripDetail.uid);
                       setBtnDisable(false);
                       setTripDetail(null);
+                      setServiceMarkers({
+                        origin: {
+                          latitude: tripDetail.latitudeStart,
+                          longitude: tripDetail.longitudeStart
+                        },
+                        destination: {
+                          latitude: tripDetail.latitudeEnd,
+                          longitude: tripDetail.longitudeEnd
+                        },
+                      })
                     }}
                   />
                 ) : (
@@ -202,28 +237,46 @@ export const HomeScreen = () => {
           </BottomSheet>
         </View>
       </GestureHandlerRootView>
-      {travelState === "sending" ? (
+      {travelState === "sending" && (
         <View style={globalStyle.cancelModalView}>
           <Text style={globalStyle.titleCancelView}>¿Quieres cancelar el viaje?</Text>
-          <TouchableOpacity style={{ marginHorizontal: 40 }}
-            onPress={async () => {
-              if (tripCurrent?.uid) {
-                await postCancelTrip(tripCurrent?.uid);
-                bottomSheetRef.current?.snapToIndex(1);
-                setServiceMarkers({
-                  origin: { latitude: 0, longitude: 0 },
-                  destination: { latitude: 0, longitude: 0 }
-                });
-              } else {
-                console.warn("No se encontró un tripId válido para cancelar");
-              }
-            }}
-          >
-            <Text style={{ color: 'red', fontSize: 16 }}>Cancelar</Text>
-          </TouchableOpacity>
+
+          {isLoadingCancel ? (
+            <View style={{ marginTop: 20 }}>
+              <ActivityIndicator size="small" color="#D99A06" />
+            </View>
+          ) : (
+            <TouchableOpacity style={{ marginHorizontal: 40 }}
+              onPress={async () => {
+
+                if (!tripCurrent?.uid) {
+                  console.warn("No se encontró un tripId válido para cancelar");
+                  return;
+                }
+
+                try {
+                  setIsLoadingCancel(true);
+
+                  await postCancelTrip(tripCurrent?.uid);
+
+                  bottomSheetRef.current?.snapToIndex(1);
+                  setStatusPanDown(false);
+                  setServiceMarkers({
+                    origin: { latitude: 0, longitude: 0 },
+                    destination: { latitude: 0, longitude: 0 }
+                  });
+                } catch (error) {
+                  console.error("❌ Error al cancelar el viaje:", error);
+                } finally {
+                  setIsLoadingCancel(false);
+                }
+              }}
+            >
+              <Text style={{ color: 'red', fontSize: 16 }}>Cancelar</Text>
+            </TouchableOpacity>
+          )}
         </View>
-      ) : null
-      }
+      )}
       <Modal
         isVisible={modalVisible.modal2}
         onBackdropPress={() => toggleModal('modal2')}
@@ -274,6 +327,90 @@ export const HomeScreen = () => {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        isVisible={modalVisible.modal3}
+        backdropOpacity={0.5}
+        animationIn="bounceInDown"
+        animationOut="fadeOutUp"
+        useNativeDriver
+        style={{ margin: 0, justifyContent: 'flex-start' }}
+      >
+        <View
+          style={{
+            marginTop: 80,
+            marginHorizontal: 20,
+            backgroundColor: '#fff',
+            borderRadius: 16,
+            padding: 24,
+            elevation: 10,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.25,
+            shadowRadius: 4,
+          }}
+        >
+          <View style={{ alignItems: 'center', marginBottom: 16 }}>
+            <COBROIMG width={250} height={220} />
+            <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#333' }}>
+              ¡Viaje finalizado!
+            </Text>
+            <Text style={{ fontSize: 16, color: '#666', marginTop: 8 }}>
+              Cobro total al cliente:
+            </Text>
+            <Text style={{ fontSize: 28, color: '#28a745', fontWeight: 'bold', marginTop: 4 }}>
+              ${tripCurrent?.price?.toFixed(2) ?? '0.00'}
+            </Text>
+            {tripCurrent?.priceWithDiscount && (
+              <View
+                style={{
+                  marginTop: 12,
+                  backgroundColor: '#FFF3CD',
+                  borderLeftWidth: 4,
+                  borderLeftColor: '#FFBC07',
+                  padding: 10,
+                  borderRadius: 10,
+                }}
+              >
+                <Text style={{ fontSize: 14, color: '#856404', fontWeight: '600' }}>
+                  🎉 Este viaje tiene un cupón del app
+                </Text>
+                <Text style={{ fontSize: 16, color: '#000', fontWeight: '700' }}>
+                  💸 CUPÓN: ${tripCurrent.priceWithDiscount.toFixed(2)} (cubierto por la app)
+                </Text>
+              </View>
+            )}
+          </View>
+          {loadingPay ?
+            <View style={{ marginTop: 10 }}>
+              <ActivityIndicator size="large" color="#D99A06" />
+            </View>
+            :
+            <TouchableOpacity
+              style={{
+                backgroundColor: '#FFBC07',
+                paddingVertical: 12,
+                borderRadius: 8,
+                alignItems: 'center',
+                marginBottom: 12,
+              }}
+              onPress={() => {
+                if (!tripCurrent) {
+                  return;
+                }
+                postEndTrip(tripCurrent?.uid)
+              }
+              }
+            >
+              <Text style={{ color: '#000000', fontSize: 16, fontWeight: 'bold' }}>
+                Confirmar cobro
+              </Text>
+            </TouchableOpacity>
+          }
+
+        </View>
+      </Modal>
+
     </>
   );
 };

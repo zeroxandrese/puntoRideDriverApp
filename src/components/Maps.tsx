@@ -96,6 +96,25 @@ export const Maps = ({ ShowsUserLocation = true, initialLocation, polyline, mark
     }
   }, [moveKnowLocation]);
 
+useEffect(() => {
+  if (tripCurrent && initialLocation && mapRef.current) {
+    const angle = getAngle(prevCarPosition, initialLocation);
+
+    mapRef.current.animateCamera({
+      center: {
+        latitude: initialLocation.latitude,
+        longitude: initialLocation.longitude,
+      },
+      pitch: 70,         // Más inclinado
+      heading: angle,    // Dirección del vehículo
+      zoom: 20,        // Más zoom para acercarse
+      altitude: 100      // Más bajo para sensación cercana
+    }, { duration: 2000 });
+
+    setPrevCarPosition(initialLocation);
+  }
+}, [tripCurrent, initialLocation]);
+
   useEffect(() => {
     setTracksChange(true);
 
@@ -108,6 +127,8 @@ export const Maps = ({ ShowsUserLocation = true, initialLocation, polyline, mark
 
   useEffect(() => {
     console.log(markers)
+    console.log('ORIGIN:', markers?.origin);
+console.log('DESTINATION:', markers?.destination);
   }, [markers])
 
   return (
@@ -117,7 +138,7 @@ export const Maps = ({ ShowsUserLocation = true, initialLocation, polyline, mark
         pointerEvents="auto"
         showsUserLocation={ShowsUserLocation}
         showsMyLocationButton={false}
-        style={globalStyle.map}
+        style={{ flex: 1 }}
         initialRegion={{
           latitude: cameraLocation.current.latitude,
           longitude: cameraLocation.current.longitude,
@@ -141,9 +162,13 @@ export const Maps = ({ ShowsUserLocation = true, initialLocation, polyline, mark
           flat={true}
           anchor={{ x: 0.5, y: 0.5 }}
         >
-          {VehicleMarkerIcon()}
+          <View style={{ backgroundColor: 'red', width: 20, height: 20, borderRadius: 10 }} />
         </Marker>
-
+<Marker coordinate={{ latitude: -12.1208513, longitude: -77.0051659 }} >
+  <View style={{ backgroundColor: 'black', padding: 4 }}>
+    <Text style={{ color: 'white' }}>Test</Text>
+  </View>
+</Marker>
         {/* Marker para el destino */}
         {tripCurrent?.tripStarted ? (
           <Marker

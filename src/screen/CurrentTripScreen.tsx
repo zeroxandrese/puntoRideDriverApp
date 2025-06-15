@@ -31,7 +31,7 @@ const parseEstimatedArrival = (estimatedArrival: string): number => {
   return numericValue;
 };
 
-export const CurrentTripScreen = ({ trip, tripCurrentVehicle, tripCurrentClient, user, comments, tripStarted }: CurrentTripScreenProps) => {
+export const CurrentTripScreen = ({ trip, tripCurrentVehicle, tripCurrentClient, user, comments, tripStarted, toggleModal }: CurrentTripScreenProps) => {
   const arrivalInMinutes = parseEstimatedArrival(trip.estimatedArrival);
   const arrivalDriver = arrivalInMinutes || 1;
   const initialTime = arrivalDriver * 60;
@@ -108,16 +108,16 @@ export const CurrentTripScreen = ({ trip, tripCurrentVehicle, tripCurrentClient,
   };
 
   return (
-    <View style={{ flex: 1 }}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={{ flex: 1 }}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0} 
       >
-
-        <BottomSheetScrollView ref={scrollRef}
-          contentContainerStyle={{ paddingBottom: 120 }} // espacio para el input
+      <BottomSheetScrollView
+          ref={scrollRef}
+          contentContainerStyle={{ padding: 16, paddingBottom: 140 }}
           keyboardShouldPersistTaps="handled"
-        >
+      >
           {tripStarted === true ? (
             <View style={{ marginTop: 16, justifyContent: 'center', alignItems: 'center' }}>
               <Text style={globalStyle.textTitleCurrentTrip}>¡El viaje ya ha comenzado!</Text>
@@ -135,7 +135,7 @@ export const CurrentTripScreen = ({ trip, tripCurrentVehicle, tripCurrentClient,
                     style={{ marginTop: 12 }}
                     onPress={async () => {
                       setBtnDisable(true);
-                      await postTripEnd(trip.uid)
+                      toggleModal('modal3')
                       setBtnDisable(false);
                     }}
                   />
@@ -311,46 +311,35 @@ export const CurrentTripScreen = ({ trip, tripCurrentVehicle, tripCurrentClient,
               )}
             </View>
           </View>
-          <View
-            style={[
-              globalStyle.containerInputCurrentTrip,
-              {
-                position: 'absolute',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                backgroundColor: '#fff',
-                flexDirection: 'row',
-                padding: 10,
-                alignItems: 'center',
-              },
-            ]}
-          >
-            <TextInput
-              style={[globalStyle.inputComments, { flex: 1 }]}
-              placeholder="Escribe un mensaje..."
-              value={comment}
-              multiline
-              onChangeText={(text) => {
-                if (text.length <= 255) cambioFormulario(text, "comment");
-              }}
-            />
-            <TouchableOpacity
-              onPress={handleSendMessage}
-              disabled={!comment.trim()}
-              style={{
-                backgroundColor: '#FFBC07',
-                paddingHorizontal: 16,
-                paddingVertical: 8,
-                borderRadius: 20,
-              }}
-            >
-              <Text style={{ color: '#000', fontWeight: 'bold' }}>Enviar</Text>
-            </TouchableOpacity>
-          </View>
         </BottomSheetScrollView>
+        <View
+          style={[
+            globalStyle.containerInputCurrentTrip
+          ]}
+        >
+          <TextInput
+            style={[globalStyle.inputComments]}
+            placeholder="Escribe un mensaje..."
+            value={comment}
+            multiline
+            onChangeText={(text) => {
+              if (text.length <= 255) cambioFormulario(text, "comment");
+            }}
+          />
+          <TouchableOpacity
+            onPress={handleSendMessage}
+            disabled={!comment.trim()}
+            style={{
+              backgroundColor: '#FFBC07',
+              paddingHorizontal: 16,
+              paddingVertical: 8,
+              borderRadius: 20,
+            }}
+          >
+            <Text style={{ color: '#000', fontWeight: 'bold' }}>Enviar</Text>
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
-    </View>
   );
 };
 

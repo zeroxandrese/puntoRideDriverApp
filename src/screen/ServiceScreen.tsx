@@ -115,6 +115,25 @@ export const ServiceScreen = ({
                                 ⏱️ {trip.estimatedArrival} min
                             </Text>
                         </View>
+                        {trip.priceWithDiscount && (
+                            <View
+                                style={{
+                                    marginTop: 12,
+                                    backgroundColor: '#FFF3CD',
+                                    borderLeftWidth: 4,
+                                    borderLeftColor: '#FFBC07',
+                                    padding: 10,
+                                    borderRadius: 10,
+                                }}
+                            >
+                                <Text style={{ fontSize: 14, color: '#856404', fontWeight: '600' }}>
+                                    🎉 Este viaje tiene un cupón del app
+                                </Text>
+                                <Text style={{ fontSize: 16, color: '#000', fontWeight: '700' }}>
+                                    💸 CUPÓN: ${trip.priceWithDiscount.toFixed(2)} (cubierto por la app)
+                                </Text>
+                            </View>
+                        )}
                     </TouchableOpacity>
                 ))
             ) : (

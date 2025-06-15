@@ -22,7 +22,7 @@ const useSendLocation = () => {
 
         const sendLocation = async () => {
             try {
-                // Solo enviar si el socket está conectado
+                
                 if (!conectado) {
                     servicioLogger.debug('Socket no conectado, omitiendo envío de ubicación');
                     return;
@@ -34,7 +34,7 @@ const useSendLocation = () => {
                 const lastLocation = lastLocationRef.current;
                 const distance = lastLocation ? haversine(lastLocation, location) : Infinity;
                 
-                // Solo enviar si se movió más de 10 metros
+                // Enviar si position es mayor a 10 metros
                 if (lastLocation && distance < 10) {
                     servicioLogger.debug('Ubicación no ha cambiado significativamente', { distance });
                     return;
@@ -49,8 +49,8 @@ const useSendLocation = () => {
         };
 
         sendLocation();
-        // Actualizar ubicación cada 7 segundos (optimización de 25s a 7s)
-        intervalRef.current = setInterval(sendLocation, 7000);
+        // Post location cada 10 segundos 
+        intervalRef.current = setInterval(sendLocation, 10000);
 
         return () => {
             if (intervalRef.current) {

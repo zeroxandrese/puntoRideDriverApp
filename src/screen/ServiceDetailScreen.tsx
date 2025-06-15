@@ -4,6 +4,7 @@ import FontAwesome6 from '@react-native-vector-icons/fontawesome6';
 
 import { trip } from '../interface/interface';
 import { ActivityIndicator } from 'react-native-paper';
+import { globalStyle } from '../theme/global.style';
 
 const { height } = Dimensions.get('window');
 
@@ -51,17 +52,37 @@ export const ServiceDetailScreen = ({ trip, onConfirm, setTripDetail, btnDisable
                     <Text style={styles.value}>{trip.estimatedArrival}</Text>
                 </View>
 
+                {trip.priceWithDiscount && (
+                    <View
+                        style={{
+                            marginTop: 12,
+                            backgroundColor: '#FFF3CD',
+                            borderLeftWidth: 4,
+                            borderLeftColor: '#FFBC07',
+                            padding: 10,
+                            borderRadius: 10,
+                        }}
+                    >
+                        <Text style={{ fontSize: 14, color: '#856404', fontWeight: '600' }}>
+                            🎉 Este viaje tiene un cupón del app
+                        </Text>
+                        <Text style={{ fontSize: 16, color: '#000', fontWeight: '700' }}>
+                            💸 CUPÓN: ${trip.priceWithDiscount.toFixed(2)} (cubierto por la app)
+                        </Text>
+                    </View>
+                )}
+
             </View>
 
             {btnDisable ? (
                 <ActivityIndicator animating={true} color="#D99A06" size="large" style={{ marginTop: 6 }} />
             ) : (
                 <>
-                    <TouchableOpacity disabled={btnDisable} style={styles.button} onPress={onConfirm}>
-                        <Text style={styles.buttonText}>✅ Confirmar Viaje</Text>
+                    <TouchableOpacity disabled={btnDisable} style={globalStyle.button} onPress={onConfirm}>
+                        <Text style={globalStyle.buttonText}>✅ Confirmar Viaje</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity disabled={btnDisable} style={styles.buttonCancel} onPress={() => setTripDetail(null)}>
-                        <Text style={styles.buttonText}>Volver</Text>
+                    <TouchableOpacity disabled={btnDisable} style={globalStyle.buttonCancel} onPress={() => setTripDetail(null)}>
+                        <Text style={globalStyle.buttonTextCancel}>Volver</Text>
                     </TouchableOpacity>
                 </>
             )
@@ -102,30 +123,5 @@ const styles = StyleSheet.create({
         flexShrink: 1,
         fontWeight: '500',
     },
-    button: {
-        backgroundColor: '#27AE60',
-        paddingVertical: 14,
-        borderRadius: 12,
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOpacity: 0.12,
-        shadowOffset: { width: 0, height: 3 },
-        shadowRadius: 6,
-    },
-    buttonCancel: {
-        backgroundColor: '#666666',
-        marginVertical: 30,
-        paddingVertical: 14,
-        borderRadius: 12,
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOpacity: 0.12,
-        shadowOffset: { width: 0, height: 3 },
-        shadowRadius: 6,
-    },
-    buttonText: {
-        color: '#fff',
-        fontWeight: '700',
-        fontSize: 16,
-    },
+
 });

@@ -62,7 +62,7 @@ export const globalStyle = StyleSheet.create({
       backgroundColor: "#fff",
       width: "100%",
       borderRadius: 30,
-      height: heightWindow * 0.7,
+      height: heightWindow * 0.83,
       padding: 20
    },
    containerContactUs: {
@@ -361,5 +361,37 @@ export const globalStyle = StyleSheet.create({
       flex: 1
    },
    textTitlePermissionScreen: { fontSize: 24, fontWeight: "bold", marginBottom: 20, textAlign: "center", color: "#333" },
-   textDescriptionPermissionScreen: { fontSize: 16, marginBottom: 30, textAlign: "center", color: "#555" }
+   textDescriptionPermissionScreen: { fontSize: 16, marginBottom: 30, textAlign: "center", color: "#555" },
+
+       button: {
+        backgroundColor: '#FFBC07',
+        paddingVertical: 14,
+        borderRadius: 12,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOpacity: 0.12,
+        shadowOffset: { width: 0, height: 3 },
+        shadowRadius: 6,
+    },
+    buttonCancel: {
+        backgroundColor: '#666666',
+        marginVertical: 30,
+        paddingVertical: 14,
+        borderRadius: 12,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOpacity: 0.12,
+        shadowOffset: { width: 0, height: 3 },
+        shadowRadius: 6,
+    },
+    buttonText: {
+        color: '#000000',
+        fontWeight: '700',
+        fontSize: 16,
+    },
+        buttonTextCancel: {
+        color: '#fff',
+        fontWeight: '700',
+        fontSize: 16,
+    }
 });

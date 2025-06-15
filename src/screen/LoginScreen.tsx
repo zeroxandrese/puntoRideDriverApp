@@ -43,9 +43,9 @@ export const LoginScreen = () => {
     if (email === "" && password === "") {
       Alert.alert("Error", "Datos incompletos");
       setIsLoading(false);
+      return
     }
     await signIn({ email: email.trim(), password: password.trim() })
-    navigation.navigate('Home');
     setIsLoading(false);
   };
 

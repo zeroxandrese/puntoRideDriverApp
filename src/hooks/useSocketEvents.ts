@@ -84,36 +84,6 @@ export const useSocketEvents = () => {
       })
     );
 
-    // New trip request
-    cleanupRefs.current.push(
-      suscribir('new_trip_request', (data: any) => {
-        servicioLogger.info('Evento: new_trip_request', { data });
-        
-        const newTrip = {
-          uid: data.tripId,
-          addressStart: data.origin.address,
-          addressEnd: data.destination.address,
-          latitudeStart: data.origin.lat,
-          longitudeStart: data.origin.lng,
-          latitudeEnd: data.destination.lat,
-          longitudeEnd: data.destination.lng,
-          price: data.price,
-          estimatedArrival: data.estimatedArrival,
-        };
-
-        const state = useServiceBusinessStore.getState();
-        const alreadyExists = state.tripsAvailable?.some(
-          (trip) => trip.uid === newTrip.uid
-        );
-
-        if (!alreadyExists) {
-          useServiceBusinessStore.setState({
-            tripsAvailable: [...(state.tripsAvailable || []), newTrip as any],
-          });
-        }
-      })
-    );
-
     // Cleanup function
     return () => {
       servicioLogger.info('Limpiando listeners de socket events');

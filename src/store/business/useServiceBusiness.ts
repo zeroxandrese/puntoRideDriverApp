@@ -150,7 +150,7 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
 
         try {
 
-            const data = await apiConfig.post<tripPostResponse>(`/cancelTrip/clientCancelTrip/${id}`);
+            const data = await apiConfig.post<tripPostResponse>(`/cancelTrip/driverCancelTrip/${id}`);
 
             if (!data.data) {
                 return
@@ -164,7 +164,6 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
             });
 
             set({
-                tripCurrentVehicle: null,
                 tripCurrentClient: null,
                 tripCurrent: null,
                 polyline: null,
@@ -182,7 +181,7 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
 
         try {
 
-            const data = await apiConfig.get<responseTripActive>(`/trip/`);
+            const data = await apiConfig.get<responseTripActive>(`/trip/Driver`);
 
             if (!data.data.response) {
                 return;
@@ -193,7 +192,6 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
                     tripStarted: true,
                     travelState: "in_progress",
                     tripCurrent: data.data.response,
-                    tripCurrentVehicle: data.data.vehicleData,
                     tripCurrentClient: data.data.userData
                 });
                 return
@@ -202,7 +200,6 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
             set({
                 travelState: "sending",
                 tripCurrent: data.data.response,
-                tripCurrentVehicle: data.data.vehicleData,
                 tripCurrentClient: data.data.userData
             });
 
@@ -262,7 +259,8 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
 
             set({
                 tripCurrentClient: data.user,
-                tripCurrent: data.trip
+                tripCurrent: data.trip,
+                travelState: "sending"
             })
 
             showToast({

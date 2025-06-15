@@ -4,6 +4,7 @@ export type RootStackParamList = {
   PermissionsScreen: undefined;
   ContactUsScreen: undefined;
   HistoryTripScreen: undefined;
+  ProfileScreen: undefined;
 };
 
 export type RootStackParamListInitial = {
@@ -198,4 +199,15 @@ export interface CurrentTripScreenProps {
   comments: Comments[] | null;
   tripStarted: boolean | null;
   toggleModal: (modal: ModalName) => void;
+}
+
+export interface earningsWeekly {
+  uid: string;
+  usersDriverId: Driver;
+  weekStart: Date;
+  weekEnd: Date;
+  totalOfferedPrice: number;
+  totalDiscounted: number;
+  totalDiscountDiff: number;
+  created: Date;
 }

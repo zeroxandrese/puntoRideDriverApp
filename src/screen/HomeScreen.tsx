@@ -42,7 +42,7 @@ export const HomeScreen = () => {
   const { tripCurrent, tripCurrentVehicle,
     tripCurrentClient, comments,
     polyline, tripStarted, travelState, set, postCancelTrip,
-    getActiveTrip, postAcceptedTrip, getVehicle, endTrip, postTripEnd } = useServiceBusinessStore();
+    getActiveTrip, postAcceptedTrip, getVehicle, endTrip, postTripEnd, getWeeklyEarnigns } = useServiceBusinessStore();
   const { conectado, estadoConexion, emitir } = useSocket();
   const { confirmarViaje } = useSocketTrip();
   const [loadingPay, setLoadingPay] = useState(false);
@@ -74,6 +74,7 @@ export const HomeScreen = () => {
       try {
         await getActiveTrip();
         await getVehicle();
+        await getWeeklyEarnigns();
       } catch (error) {
         console.error("Error al obtener el viaje activo:", error);
       }
@@ -297,6 +298,15 @@ export const HomeScreen = () => {
               }}>
               <FontAwesome6 name="car" size={20} color="#333" style={globalStyle.icon} iconStyle="solid" />
               <Text style={globalStyle.menuText}>Viajemos</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={globalStyle.menuItem}
+              onPress={() => {
+                navigation.navigate('ProfileScreen');
+                toggleModal('modal2');
+              }}>
+              <FontAwesome6 name="user" size={20} color="#333" style={globalStyle.icon} iconStyle="solid" />
+              <Text style={globalStyle.menuText}>Perfil</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={globalStyle.menuItem}

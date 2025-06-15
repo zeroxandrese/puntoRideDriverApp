@@ -5,7 +5,7 @@ import {
     tripPostResponse, Users,
     vehicle, contactUsResponse, tripsHistoryResponse,
     Comments, LatLng, SurveyResponse, trip,
-    responseTripActive, tripsAvailableResponse, tripsAcceptedResponse
+    responseTripActive, tripsAvailableResponse, tripsAcceptedResponse, earningsWeekly
 } from '../../interface/interface';
 import apiConfig from "../../apiConfig/apiConfig";
 import { ErrorAPI, obtenerMensajeError, EventoTripAsignado } from '../../interface/errores';
@@ -20,6 +20,7 @@ interface BusinessState {
     tripsAvailable: trip[] | null;
     tripCurrentVehicle: vehicle | null;
     tripCurrentClient: Users | null;
+    weeklyEarnings: number | null;
     polyline: { latitude: number; longitude: number }[] | null;
     positionDriverEvent: LatLng | null;
     tripStarted: boolean;
@@ -42,6 +43,7 @@ interface BusinessState {
     getActiveTrip: () => Promise<void>;
     getTripAvailable: () => Promise<void>;
     getVehicle: () => Promise<void>;
+    getWeeklyEarnigns: () => Promise<void>;
     postSurvey: (id: string, feeback: string, score: number) => Promise<void>;
     set: (state: Partial<BusinessState>) => void;
 };
@@ -66,6 +68,7 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
     tripsHistory: null,
     tripCurrent: null,
     tripCurrentVehicle: null,
+    weeklyEarnings: null,
     travelState: 'idle',
     tripCurrentClient: null,
     tripsAvailable: null,
@@ -325,7 +328,6 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
             await apiConfig.post<tripsAcceptedResponse>(`/trip/tripEnd/${id}`);
 
             set({
-                tripCurrentVehicle: null,
                 tripCurrentClient: null,
                 polyline: null,
                 tripCurrent: null,
@@ -354,9 +356,22 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
         try {
 
             const { data } = await apiConfig.get<vehicle>(`/vehicles/`);
-
             set({
                 tripCurrentVehicle: data
+            })
+
+        } catch (error) {
+            set({ errorMessage: (error as ErrorAPI).response?.data?.msg || "Error al comentar" });
+        }
+    },
+
+    getWeeklyEarnigns: async () => {
+
+        try {
+
+            const { data } = await apiConfig.get<earningsWeekly>(`/earningsWeekly/`);
+            set({
+                weeklyEarnings: data.totalDiscountDiff
             })
 
         } catch (error) {

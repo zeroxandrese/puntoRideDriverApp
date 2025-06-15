@@ -11,6 +11,7 @@ import useAuthStore from '../globalState/globalState';
 import CarLoading from '../components/cardLoading';
 import { ContactUsScreen } from '../screen/ContactUsScreen';
 import { HistoryTripScreen } from '../screen/HistoryTripScreen';
+import { ProfileScreen } from '../screen/ProfileScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -56,6 +57,7 @@ export const StackNavigationInitial = () => {
           <>
             <Stack.Screen name="HomeScreen" component={HomeScreen} />
             <Stack.Screen name="ContactUsScreen" component={ContactUsScreen} />
+            <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
             <Stack.Screen name="HistoryTripScreen" component={HistoryTripScreen} />
           </>
         )

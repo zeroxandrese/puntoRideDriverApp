@@ -55,7 +55,9 @@ const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signIn: async ({ email, password }) => {
+
     try {
+ 
       const { data } = await apiConfig.post<PostDriverResponse>("/authDriver/login", { email, password });
 
       await almacenamientoSeguro.guardarCredenciales({

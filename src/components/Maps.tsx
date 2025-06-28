@@ -29,7 +29,7 @@ const getAngle = (prevPos: LatLng, newPos: LatLng): number => {
 };
 
 export const Maps = ({ ShowsUserLocation = true, initialLocation, polyline, markers, tripCurrent, vehicle, onDestinationChange }: Props) => {
-
+  const testCoord = { latitude: -12.1208513, longitude: -77.0051659 };
   const { moveKnowLocation } = moveCameraStore();
   const mapRef = useRef<MapView>();
   const cameraLocation = useRef<Location>(initialLocation);
@@ -96,24 +96,24 @@ export const Maps = ({ ShowsUserLocation = true, initialLocation, polyline, mark
     }
   }, [moveKnowLocation]);
 
-useEffect(() => {
-  if (tripCurrent && initialLocation && mapRef.current) {
-    const angle = getAngle(prevCarPosition, initialLocation);
+  useEffect(() => {
+    if (tripCurrent && initialLocation && mapRef.current) {
+      const angle = getAngle(prevCarPosition, initialLocation);
 
-    mapRef.current.animateCamera({
-      center: {
-        latitude: initialLocation.latitude,
-        longitude: initialLocation.longitude,
-      },
-      pitch: 70,         // Más inclinado
-      heading: angle,    // Dirección del vehículo
-      zoom: 20,        // Más zoom para acercarse
-      altitude: 100      // Más bajo para sensación cercana
-    }, { duration: 2000 });
+      mapRef.current.animateCamera({
+        center: {
+          latitude: initialLocation.latitude,
+          longitude: initialLocation.longitude,
+        },
+        pitch: 70,         // Más inclinado
+        heading: angle,    // Dirección del vehículo
+        zoom: 20,        // Más zoom para acercarse
+        altitude: 100      // Más bajo para sensación cercana
+      }, { duration: 2000 });
 
-    setPrevCarPosition(initialLocation);
-  }
-}, [tripCurrent, initialLocation]);
+      setPrevCarPosition(initialLocation);
+    }
+  }, [tripCurrent, initialLocation]);
 
   useEffect(() => {
     setTracksChange(true);
@@ -127,8 +127,7 @@ useEffect(() => {
 
   useEffect(() => {
     console.log(markers)
-    console.log('ORIGIN:', markers?.origin);
-console.log('DESTINATION:', markers?.destination);
+    console.log('polyline:', polyline);
   }, [markers])
 
   return (
@@ -138,7 +137,7 @@ console.log('DESTINATION:', markers?.destination);
         pointerEvents="auto"
         showsUserLocation={ShowsUserLocation}
         showsMyLocationButton={false}
-        style={{ flex: 1 }}
+        style={globalStyle.map}
         initialRegion={{
           latitude: cameraLocation.current.latitude,
           longitude: cameraLocation.current.longitude,
@@ -153,7 +152,10 @@ console.log('DESTINATION:', markers?.destination);
             strokeWidth={5}
           />
         )}
-
+        <Marker
+          coordinate={{ latitude: -12.15938549, longitude: -76.96502348 }}
+          image={require('../assets/marker.png')}
+        />
         {/* Marker para el origen */}
         <Marker
           coordinate={markers?.origin ?? { latitude: initialLocation.latitude, longitude: initialLocation.longitude }}
@@ -162,13 +164,13 @@ console.log('DESTINATION:', markers?.destination);
           flat={true}
           anchor={{ x: 0.5, y: 0.5 }}
         >
-          <View style={{ backgroundColor: 'red', width: 20, height: 20, borderRadius: 10 }} />
+          {VehicleMarkerIcon()}
         </Marker>
-<Marker coordinate={{ latitude: -12.1208513, longitude: -77.0051659 }} >
-  <View style={{ backgroundColor: 'black', padding: 4 }}>
-    <Text style={{ color: 'white' }}>Test</Text>
-  </View>
-</Marker>
+        <Marker coordinate={{ latitude: -12.1208513, longitude: -77.0051659 }} >
+          <View style={{ backgroundColor: 'black', padding: 4 }}>
+            <Text style={{ color: 'white' }}>Test</Text>
+          </View>
+        </Marker>
         {/* Marker para el destino */}
         {tripCurrent?.tripStarted ? (
           <Marker

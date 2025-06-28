@@ -83,8 +83,7 @@ export interface vehicle {
 
 export interface responseTripActive {
   response: tripResponse,
-  userData: Users,
-  vehicleData: vehicle
+  userClientData: Users
 }
 
 export interface trip {
@@ -207,7 +206,7 @@ export interface earningsWeekly {
   weekStart: Date;
   weekEnd: Date;
   totalOfferedPrice: number;
-  totalDiscounted: number;
-  totalDiscountDiff: number;
+  totalPriceWithDiscount: number;
+  totalDiscountDifference: number;
   created: Date;
 }

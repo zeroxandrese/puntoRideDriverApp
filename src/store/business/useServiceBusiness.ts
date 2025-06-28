@@ -184,7 +184,7 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
 
         try {
 
-            const data = await apiConfig.get<responseTripActive>(`/trip/Driver`);
+            const data = await apiConfig.get<any>(`/trip/Driver`);
 
             if (!data.data.response) {
                 return;
@@ -195,7 +195,7 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
                     tripStarted: true,
                     travelState: "in_progress",
                     tripCurrent: data.data.response,
-                    tripCurrentClient: data.data.userData
+                    tripCurrentClient: data.data.userClientData
                 });
                 return
             }
@@ -203,7 +203,7 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
             set({
                 travelState: "sending",
                 tripCurrent: data.data.response,
-                tripCurrentClient: data.data.userData
+                tripCurrentClient: data.data.userClientData
             });
 
 
@@ -370,8 +370,9 @@ export const useServiceBusinessStore = create<BusinessState>()((set, get) => ({
         try {
 
             const { data } = await apiConfig.get<earningsWeekly>(`/earningsWeekly/`);
+
             set({
-                weeklyEarnings: data.totalDiscountDiff
+                weeklyEarnings: data.totalDiscountDifference
             })
 
         } catch (error) {

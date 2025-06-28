@@ -41,6 +41,7 @@ export const ProfileScreen: React.FC = () => {
     if (!photoFile) return;
     await updateAvatar(photoFile);
     setIsLoadingPhoto(false);
+    setPhotoFile(null);
   };
 
   const handleSavePhone = () => {
@@ -96,7 +97,7 @@ export const ProfileScreen: React.FC = () => {
           </Card.Content>
         </Card>
 
-        <Card style={globalStyle.containerCard}>
+{/*         <Card style={globalStyle.containerCard}>
           <Card.Title title="Número de teléfono" titleStyle={{ color: '#000000' }} />
           <Card.Content>
             <TextInput
@@ -110,7 +111,7 @@ export const ProfileScreen: React.FC = () => {
               Guardar
             </Button>
           </Card.Content>
-        </Card>
+        </Card> */}
 
         <Card style={[globalStyle.containerCard, styles.balanceCard]}>
           <Card.Title title="Saldo semanal a favor" titleStyle={{ color: '#000000' }} />

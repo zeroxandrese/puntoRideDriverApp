@@ -101,7 +101,6 @@ export const CurrentTripScreen = ({ trip, tripCurrentVehicle, tripCurrentClient,
 
   const handleSendMessage = async () => {
     if (!comment.trim()) return;
-    console.log(comment, trip.uid, "desde el currentTrip")
     postCommentsTrip(comment, trip.uid);
 
     cambioFormulario("", "comment");

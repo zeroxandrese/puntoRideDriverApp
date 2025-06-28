@@ -24,6 +24,7 @@ import { ServiceScreen } from '../screen/ServiceScreen';
 import { ServiceDetailScreen } from './ServiceDetailScreen';
 import useSendLocation from '../components/useSendLocation';
 import COBROIMG from '../assets/CobroImg.svg';
+import DebugMap from '../components/DebugMap';
 
 type NavigationProps = StackNavigationProp<RootStackParamList, "HomeScreen">;
 
@@ -141,6 +142,7 @@ export const HomeScreen = () => {
       <GestureHandlerRootView style={globalStyle.GlobalContainerCustom}>
         <View style={StyleSheet.absoluteFillObject}>
           <StatusBar backgroundColor="#FFBC07" barStyle="dark-content" />
+          {/* <DebugMap /> */}
           <Maps initialLocation={lastKnowLocation}
             polyline={polyline} markers={serviceMarkers} tripCurrent={tripCurrent}
             vehicle={user?.vehicleType}
@@ -369,9 +371,9 @@ export const HomeScreen = () => {
               Cobro total al cliente:
             </Text>
             <Text style={{ fontSize: 28, color: '#28a745', fontWeight: 'bold', marginTop: 4 }}>
-              ${tripCurrent?.price?.toFixed(2) ?? '0.00'}
+              ${tripCurrent?.priceWithDiscount?.toFixed(2) ?? tripCurrent?.price?.toFixed(2) ?? '0.00'}
             </Text>
-            {tripCurrent?.priceWithDiscount && (
+            {tripCurrent?.discountApplied && (
               <View
                 style={{
                   marginTop: 12,
